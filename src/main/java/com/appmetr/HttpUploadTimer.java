@@ -1,14 +1,16 @@
 package com.appmetr;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Logger;
 
 public class HttpUploadTimer implements Runnable {
 
-    protected static final Logger logger = Logger.getLogger("HttpUploadTimer");
+    protected static final Logger logger = LoggerFactory.getLogger("HttpUploadTimer");
 
     private final Lock lock = new ReentrantLock();
     private final Condition trigger = lock.newCondition();
@@ -38,11 +40,11 @@ public class HttpUploadTimer implements Runnable {
                 logger.info("HttpUploadTimer - run uploader");
                 appMetr.upload();
             } catch (InterruptedException ie) {
-                logger.info("Interrupted while polling the queue. Stop polling");
+                logger.warn("Interrupted while polling the queue. Stop polling");
 
                 pollingThread.interrupt();
             } catch (Exception e) {
-                logger.info("Error while uploading batch: " + e);
+                logger.error("Error while uploading batch", e);
             } finally {
                 lock.unlock();
             }

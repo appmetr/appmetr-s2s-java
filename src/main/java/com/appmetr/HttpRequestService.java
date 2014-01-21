@@ -3,6 +3,8 @@ package com.appmetr;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.oracle.javafx.jmx.json.JSONException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -10,10 +12,9 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class HttpRequestService {
-    private static Logger logger = Logger.getLogger("HttpRequestService");
+    private static Logger logger = LoggerFactory.getLogger("HttpRequestService");
     private final static String serverMethodName = "server.trackS2S";
 
     public static boolean sendRequest(String callbackUrl, String token, byte[] batches) throws IOException {
@@ -56,21 +57,11 @@ public class HttpRequestService {
                     return true;
                 }
             } catch (JSONException jsonError) {
-                // nothing to do
+                logger.warn("json exception", jsonError);
             }
 
-//            if (BuildConfig.DEBUG) {
-//                Log.d(TAG, "Invalid server response: " + result);
-//            }
         } catch (Exception error) {
-            logger.info("EXCEPTION " + error);
-//            Log.e(TAG, "Server error", error);
-//            if (BuildConfig.DEBUG) {
-//                Log.d(TAG,
-//                        "Please, check rights for the app in AndroidManifest.xml."
-//                                + " For the app to have access to the network the uses permission \"android.permission.INTERNET\" "
-//                                + "must be set. You can find a detailed description here: http://developer.android.com/reference/android/Manifest.permission.html#INTERNET");
-//            }
+            logger.error("server error", error);
         } finally {
             connection.disconnect();
         }

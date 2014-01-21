@@ -1,9 +1,14 @@
 package com.appmetr;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayDeque;
 import java.util.List;
 
 public class MemoryBatchPersister implements BatchPersister {
+    protected static final Logger logger = LoggerFactory.getLogger("MemoryBatchPersister");
+
     private ArrayDeque<Batch> batchStack = new ArrayDeque<Batch>() {};
     private int batchId = 0;
 
@@ -26,7 +31,7 @@ public class MemoryBatchPersister implements BatchPersister {
             Batch batch = batchStack.peekLast();
 
             if(batch == null || batch.getBatchId() != batchId){
-                //TODO: what to do here???
+                logger.warn("trying to delete not last branch");
             }else{
                 batchStack.pollLast();
             }

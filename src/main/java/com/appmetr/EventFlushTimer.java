@@ -1,14 +1,16 @@
 package com.appmetr;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Logger;
 
 public class EventFlushTimer implements Runnable {
 
-    protected static final Logger logger = Logger.getLogger("EventFlushTimer");
+    protected static final Logger logger = LoggerFactory.getLogger("EventFlushTimer");
 
     private final Lock lock = new ReentrantLock();
     private final Condition trigger = lock.newCondition();
@@ -37,17 +39,17 @@ public class EventFlushTimer implements Runnable {
                 logger.info("EventFlushTimer - run flusher");
                 appMetr.flush();
             } catch (InterruptedException ie) {
-                logger.info("Interrupted while polling the queue. Stop polling");
+                logger.warn("Interrupted while polling the queue. Stop polling");
 
                 pollingThread.interrupt();
             } catch (Exception e) {
-                logger.info("Error while flushing events: " + e);
+                logger.error("Error while flushing events", e);
             } finally {
                 lock.unlock();
             }
         }
 
-        logger.info("EventFlushTimer stoped!");
+        logger.info("EventFlushTimer stopped!");
     }
 
     public void trigger() {

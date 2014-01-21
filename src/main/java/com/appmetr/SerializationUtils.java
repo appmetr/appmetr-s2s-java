@@ -1,15 +1,16 @@
 package com.appmetr;
 
 import com.google.gson.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.logging.Logger;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
 public class SerializationUtils {
-    private static Logger logger = Logger.getLogger("SerializationUtils");
+    private static Logger logger = LoggerFactory.getLogger("SerializationUtils");
 
     public static byte[] serializeGzip(Batch batch){
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -24,7 +25,7 @@ public class SerializationUtils {
             throw new RuntimeException(e);
         }finally {
             if (gzos != null) try { gzos.close(); } catch (IOException ioException) {
-                logger.info("Cant close gzip output stream: " + ioException);
+                logger.info("Cant close gzip output stream", ioException);
             };
         }
 

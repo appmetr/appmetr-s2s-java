@@ -1,15 +1,17 @@
 package com.appmetr;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Logger;
 
 public class AppMetr {
-    protected static final Logger logger = Logger.getLogger("AppMetr");//LoggerFactory.getLogger("AppMetr");
+    protected static final Logger logger = LoggerFactory.getLogger("AppMetr");
 
     protected final Lock flushLock = new ReentrantLock();
     protected final Lock uploadLock = new ReentrantLock();
@@ -23,7 +25,7 @@ public class AppMetr {
     protected EventFlushTimer eventFlushTimer;
     protected HttpUploadTimer httpUploadTimer;
 
-    private static final int MAX_EVENTS_SIZE = 1024 * 500;//TODO: change that
+    private static final int MAX_EVENTS_SIZE = 1024 * 500;//TODO: 200 текущих евентов помещается
 
     private BatchPersister batchPersister = new MemoryBatchPersister();
 
@@ -57,7 +59,7 @@ public class AppMetr {
                 eventFlushTimer.trigger();
             }
         } catch (Exception error) {
-            logger.info("track failed " + error);
+            logger.error("track failed",  error);
         }
     }
 
@@ -74,6 +76,8 @@ public class AppMetr {
         if(copyEvent.size() > 0){
             batchPersister.persist(copyEvent);
             httpUploadTimer.trigger();
+        }else{
+            logger.info("nothing to flush");
         }
 
         logger.info("flushing completed");
@@ -95,13 +99,13 @@ public class AppMetr {
                 result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeGzip(batch));
                 if(result) batchPersister.deleteLastBatch(batch.getBatchId());
             } catch(IOException e){
-                logger.info("IOException while sending request " + e);
+                logger.error("IOException while sending request", e);
             }
         }else{
             logger.info("nothing to upload");
         }
 
-        logger.info("upload complete, success = " + result);
+        logger.info(String.format("upload completed with status: %s", result ? "success" : "fails"));
         uploadLock.unlock();
     }
 

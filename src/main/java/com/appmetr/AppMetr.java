@@ -1,7 +1,5 @@
 package com.appmetr;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
@@ -13,28 +11,33 @@ import java.util.logging.Logger;
 public class AppMetr {
     protected static final Logger logger = Logger.getLogger("AppMetr");//LoggerFactory.getLogger("AppMetr");
 
-    protected final Lock fileWritterLock = new ReentrantLock();
     protected final Lock flushLock = new ReentrantLock();
+    protected final Lock uploadLock = new ReentrantLock();
 
     private final String token;
+    private final String url;
+
     private AtomicInteger eventsSize = new AtomicInteger(0);
     private final ArrayList<Event> eventList = new ArrayList<Event>();
 
-    protected File file;
-    protected FileWriter fileWriter;
-    protected EventFlusher eventFlusher;
-    protected BatchPusher batchPusher;
+    protected EventFlushTimer eventFlushTimer;
+    protected HttpUploadTimer httpUploadTimer;
 
-    private static final int MAX_EVENTS_SIZE = 500 * 1024 * 1024;
-    private static final int MAX_FILE_SIZE =  1024 * 100; //100 kb
+    private static final int MAX_EVENTS_SIZE = 1024 * 500;//TODO: change that
 
-    public AppMetr(String token){
+    private BatchPersister batchPersister = new MemoryBatchPersister();
+
+    public AppMetr(String token, String url){
+        this.url = url;
         this.token = token;
-        eventFlusher = new EventFlusher(this);
-        eventFlusher.run();
 
-        batchPusher = new BatchPusher();
-        batchPusher.run();
+        eventFlushTimer = new EventFlushTimer(this);
+        Thread eventFlushTimerThread = new Thread(eventFlushTimer);
+        eventFlushTimerThread.start();
+
+        httpUploadTimer = new HttpUploadTimer(this);
+        Thread httpUploadTimerThread = new Thread(httpUploadTimer);
+        httpUploadTimerThread.start();
     }
 
     public void track(String eventName, Map<String, String> properties){
@@ -45,12 +48,13 @@ public class AppMetr {
     public void track(Event newEvent){
         try {
             eventsSize.addAndGet(newEvent.calcApproximateSize());
-            if(isNeedToFlush()){
-                eventFlusher.trigger();
-            }
 
             synchronized (eventList) {
                 eventList.add(newEvent);
+            }
+
+            if(isNeedToFlush()){
+                eventFlushTimer.trigger();
             }
         } catch (Exception error) {
             logger.info("track failed " + error);
@@ -61,64 +65,48 @@ public class AppMetr {
         flushLock.lock();
         logger.info("flushing started");
 
-        flushDataImpl();
-
-        logger.info("flushing completed");
-        flushLock.unlock();
-    }
-
-    protected void flushDataImpl() {
         ArrayList<Event> copyEvent;
         synchronized (eventList) {
             copyEvent = new ArrayList<Event>(eventList);
             eventList.clear();
         }
 
-        if (copyEvent.size() > 0) {
-            fileWritterLock.lock();
-            try {
-                int batchId = BatchIdRandomGenerator.getBatchId();
-                String encodedString = Integer.toString(batchId);
-
-                int copyEventSize = 0;
-                for(Event event : copyEvent){
-                    copyEventSize += event.calcApproximateSize();
-                }
-
-                if (fileWriter != null && encodedString.length() + copyEventSize + file.length() > MAX_FILE_SIZE){
-                    closeCurrentFileWriter();
-                }
-
-                if (fileWriter == null) {
-                    file = new File(FileNamer.getNextFileName());
-                    fileWriter = new FileWriter(file, true);
-                }
-
-                fileWriter.append(encodedString);
-            } catch (Exception error) {
-                logger.info("Failed to save the data to disc. " + error);
-            }
-
-            fileWritterLock.unlock();
-        }
-    }
-
-    private void closeCurrentFileWriter(){
-        fileWritterLock.lock();
-
-        try {
-            if (fileWriter != null) {
-                fileWriter.close();
-            }
-        } catch (final IOException e) {
-            logger.info("IOException: " + e);
+        if(copyEvent.size() > 0){
+            batchPersister.persist(copyEvent);
+            httpUploadTimer.trigger();
         }
 
-        fileWriter = null;
-        fileWritterLock.unlock();
+        logger.info("flushing completed");
+        flushLock.unlock();
     }
 
     protected boolean isNeedToFlush() {
         return eventsSize.get() >= MAX_EVENTS_SIZE;
+    }
+
+    protected void upload(){
+        uploadLock.lock();
+        logger.info("upload starting");
+
+        Batch batch = batchPersister.getNextBatch();
+        boolean result = false;
+        if(batch != null){
+            try{
+                result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeGzip(batch));
+                if(result) batchPersister.deleteLastBatch(batch.getBatchId());
+            } catch(IOException e){
+                logger.info("IOException while sending request " + e);
+            }
+        }else{
+            logger.info("nothing to upload");
+        }
+
+        logger.info("upload complete, success = " + result);
+        uploadLock.unlock();
+    }
+
+    protected void stop(){
+        eventFlushTimer.stop();
+        httpUploadTimer.stop();
     }
 }

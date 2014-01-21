@@ -3,16 +3,17 @@ package com.appmetr;
 import java.util.Map;
 
 public class Event {
-    private String eventId;
+
+    private String event;
     private Map<String, String> properties;
 
-    public Event(String eventId, Map<String, String> properties){
-        this.eventId = eventId;
+    public Event(String event, Map<String, String> properties){
+        this.event = event;
         this.properties = properties;
     }
 
-    public String getEventId() {
-        return eventId;
+    public String getEventName() {
+        return event;
     }
 
     public Map<String, String> getProperties(){
@@ -30,7 +31,7 @@ public class Event {
     }
 
     @Override public String toString(){
-        StringBuilder strBuilder = new StringBuilder(eventId);
+        StringBuilder strBuilder = new StringBuilder(event);
         strBuilder.append("\r\n");
         for(Map.Entry property : properties.entrySet()){
             strBuilder.append(property.getKey() + " - " + property.getValue());

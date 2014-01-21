@@ -6,48 +6,49 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
-public class EventFlusher implements Runnable {
+public class HttpUploadTimer implements Runnable {
 
-    protected static final Logger logger = Logger.getLogger("EventFlusher");
+    protected static final Logger logger = Logger.getLogger("HttpUploadTimer");
 
     private final Lock lock = new ReentrantLock();
     private final Condition trigger = lock.newCondition();
 
     private volatile Thread pollingThread = null;
 
-    private static final long FLUSH_PERIOD = DateTimeConstants.MILLIS_PER_MINUTE * 5;
+//    private static final long UPLOAD_PERIOD = DateTimeConstants.MILLIS_PER_MINUTE * 5;
+    private static final long UPLOAD_PERIOD = DateTimeConstants.MILLIS_PER_SECOND * 30; //TODO: change that
 
     private final AppMetr appMetr;
 
-    public EventFlusher(AppMetr appMetr){
+    public HttpUploadTimer(AppMetr appMetr){
         //TODO: change AppMetr to Singleton and delete this constructor
         this.appMetr = appMetr;
     }
 
     @Override public void run() {
         pollingThread = Thread.currentThread();
-        logger.info("EventFlusher started!");
+        logger.info("HttpUploadTimer started!");
 
         while (!pollingThread.isInterrupted()) {
             lock.lock();
 
             try {
-                trigger.await(FLUSH_PERIOD, TimeUnit.MILLISECONDS);
+                trigger.await(UPLOAD_PERIOD, TimeUnit.MILLISECONDS);
 
-                logger.info("EventFlusher - run flusher");
-                appMetr.flush();
+                logger.info("HttpUploadTimer - run uploader");
+                appMetr.upload();
             } catch (InterruptedException ie) {
                 logger.info("Interrupted while polling the queue. Stop polling");
 
                 pollingThread.interrupt();
             } catch (Exception e) {
-                logger.info("Error while flushing events: " + e);
+                logger.info("Error while uploading batch: " + e);
             } finally {
                 lock.unlock();
             }
         }
 
-        logger.info("EventFlusher stoped!");
+        logger.info("HttpUploadTimer stoped!");
     }
 
     public void trigger() {
@@ -61,7 +62,7 @@ public class EventFlusher implements Runnable {
     }
 
     public void stop() {
-        logger.info("EventFlusher stop triggered!");
+        logger.info("HttpUploadTimer stop triggered!");
 
         if (pollingThread != null) {
             pollingThread.interrupt();

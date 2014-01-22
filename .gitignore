@@ -1,0 +1,13 @@
+.idea
+sources/*/target
+sources/*/*/target
+*.iml
+*.ipr
+*.iws
+atlassian-ide-plugin.xml
+sources/files
+
+# Sass Cache #
+###################
+*.sassc
+*.scssc

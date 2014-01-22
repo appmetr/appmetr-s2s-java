@@ -1,18 +1,17 @@
-package com.appmetr;
+package com.appmetr.s2s.persister;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.appmetr.s2s.Batch;
+import com.appmetr.s2s.Event;
 
 import java.util.ArrayDeque;
 import java.util.List;
 
 public class MemoryBatchPersister implements BatchPersister {
-    protected static final Logger logger = LoggerFactory.getLogger("MemoryBatchPersister");
 
     private ArrayDeque<Batch> batchStack = new ArrayDeque<Batch>() {};
     private int batchId = 0;
 
-    @Override public Batch getNextBatch() {
+    @Override public Batch getNext() {
         synchronized (batchStack) {
             if (batchStack.size() == 0) return null;
             return batchStack.peekLast();
@@ -26,15 +25,9 @@ public class MemoryBatchPersister implements BatchPersister {
         }
     }
 
-    @Override public void deleteLastBatch(int batchId) {
+    @Override public void remove() {
         synchronized (batchStack) {
-            Batch batch = batchStack.peekLast();
-
-            if(batch == null || batch.getBatchId() != batchId){
-                logger.warn("trying to delete not last branch");
-            }else{
-                batchStack.pollLast();
-            }
+            batchStack.pollLast();
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.appmetr;
+package com.appmetr.s2s;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,36 +8,36 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class EventFlushTimer implements Runnable {
+public class AppMetrTimer implements Runnable {
 
-    protected static final Logger logger = LoggerFactory.getLogger("EventFlushTimer");
+    protected static final Logger logger = LoggerFactory.getLogger(AppMetrTimer.class);
 
     private final Lock lock = new ReentrantLock();
     private final Condition trigger = lock.newCondition();
 
     private volatile Thread pollingThread = null;
 
-    private static final long FLUSH_PERIOD = DateTimeConstants.MILLIS_PER_MINUTE * 3;//TODO: change that
+    private final long TIMER_PERIOD;
 
-    private final AppMetr appMetr;
+    private final Runnable onTimer;
 
-    public EventFlushTimer(AppMetr appMetr){
-        //TODO: change AppMetr to Singleton and delete this constructor
-        this.appMetr = appMetr;
+    public AppMetrTimer(long period, Runnable onTimer) {
+        TIMER_PERIOD = period;
+        this.onTimer = onTimer;
     }
 
     @Override public void run() {
         pollingThread = Thread.currentThread();
-        logger.info("EventFlushTimer started!");
+        logger.info("AppMetrTimer started!");
 
         while (!pollingThread.isInterrupted()) {
             lock.lock();
 
             try {
-                trigger.await(FLUSH_PERIOD, TimeUnit.MILLISECONDS);
+                trigger.await(TIMER_PERIOD, TimeUnit.MILLISECONDS);
 
-                logger.info("EventFlushTimer - run flusher");
-                appMetr.flush();
+                logger.info("AppMetrTimer - run flusher");
+                onTimer.run();
             } catch (InterruptedException ie) {
                 logger.warn("Interrupted while polling the queue. Stop polling");
 
@@ -49,7 +49,7 @@ public class EventFlushTimer implements Runnable {
             }
         }
 
-        logger.info("EventFlushTimer stopped!");
+        logger.info("AppMetrTimer stopped!");
     }
 
     public void trigger() {
@@ -63,7 +63,7 @@ public class EventFlushTimer implements Runnable {
     }
 
     public void stop() {
-        logger.info("EventFlushTimer stop triggered!");
+        logger.info("AppMetrTimer stop triggered!");
 
         if (pollingThread != null) {
             pollingThread.interrupt();

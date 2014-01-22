@@ -1,4 +1,4 @@
-package com.appmetr;
+package com.appmetr.s2s;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -14,15 +14,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class HttpRequestService {
-    private static Logger logger = LoggerFactory.getLogger("HttpRequestService");
+    private static Logger logger = LoggerFactory.getLogger(HttpRequestService.class);
     private final static String serverMethodName = "server.trackS2S";
 
-    public static boolean sendRequest(String callbackUrl, String token, byte[] batches) throws IOException {
+    public static boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
         Map<String, String> params = new HashMap<String, String>(2);
         params.put("method", serverMethodName);
         params.put("token", token);
 
-        URL url = new URL(callbackUrl + "?" + makeQueryString(params));
+        URL url = new URL(httpURL + "?" + makeQueryString(params));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
         try {
@@ -57,11 +57,11 @@ public class HttpRequestService {
                     return true;
                 }
             } catch (JSONException jsonError) {
-                logger.warn("json exception", jsonError);
+                logger.warn("Json exception", jsonError);
             }
 
         } catch (Exception error) {
-            logger.error("server error", error);
+            logger.error("Server error", error);
         } finally {
             connection.disconnect();
         }

@@ -5,10 +5,12 @@ import java.util.Map;
 public class Event {
 
     private String event;
-    private Map<String, String> properties;
+    private long timeStamp;
+    private Map<String, Object> properties;
 
-    public Event(String event, Map<String, String> properties) {
+    public Event(String event, long timeStamp, Map<String, Object> properties) {
         this.event = event;
+        this.timeStamp = timeStamp;
         this.properties = properties;
     }
 
@@ -16,27 +18,23 @@ public class Event {
         return event;
     }
 
-    public Map<String, String> getProperties() {
+    public Map<String, Object> getProperties() {
         return properties;
+    }
+
+    public long getTimeStamp() {
+        return timeStamp;
     }
 
     public int calcApproximateSize() {
         int propertiesSize = 40 + (40 * properties.size()); //40 - Map size and 40 - each entry overhead
-        for (Map.Entry<String, String> entry : properties.entrySet()) {
+        propertiesSize += String.valueOf(timeStamp).length() * 2 + 24 + 16;
+
+        for (Map.Entry<String, Object> entry : properties.entrySet()) {
             propertiesSize += entry.getKey().length() * 2 + 24 + 16;    //24 - String object size, 16 - char[]
-            propertiesSize += entry.getValue().length() * 2 + 24 + 16;
+            propertiesSize += entry.getValue().toString().length() * 2 + 24 + 16; //toString because sending this object via json
         }
 
         return 8 + propertiesSize + 8; //8 - object header, 8 - double
-    }
-
-    @Override public String toString() {
-        StringBuilder strBuilder = new StringBuilder(event);
-        strBuilder.append("\r\n");
-        for (Map.Entry property : properties.entrySet()) {
-            strBuilder.append(property.getKey() + " - " + property.getValue());
-        }
-
-        return strBuilder.toString();
     }
 }

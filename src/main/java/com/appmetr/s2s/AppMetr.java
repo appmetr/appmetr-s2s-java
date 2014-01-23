@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -28,16 +29,17 @@ public class AppMetr {
     protected AppMetrTimer httpUploadTimer;
 
     private static final int MILLIS_PER_MINUTE = 1000 * 60;
-    private static final long FLUSH_PERIOD = 1000 * 30;//TODO: change
+    private static final long FLUSH_PERIOD = 1000 * 10;//TODO: change
     private static final long UPLOAD_PERIOD = 1000 * 10;//TODO: change
 
     private static final int MAX_EVENTS_SIZE = 1024 * 500;
 
-    private BatchPersister batchPersister = new MemoryBatchPersister();
+    private BatchPersister batchPersister;
 
-    public AppMetr(String token, String url) {
+    public AppMetr(String token, String url, BatchPersister persister) {
         this.url = url;
         this.token = token;
+        this.batchPersister = persister == null ? new MemoryBatchPersister() : persister;
 
         eventFlushTimer = new AppMetrTimer(FLUSH_PERIOD, new Runnable() {
             @Override public void run() {
@@ -54,8 +56,12 @@ public class AppMetr {
         new Thread(httpUploadTimer).start();
     }
 
-    public void track(String eventName, Map<String, String> properties) {
-        Event event = new Event(eventName, properties);
+    public AppMetr(String token, String url) {
+        this(token, url, null);
+    }
+
+    public void track(String eventName, Map<String, Object> properties) {
+        Event event = new Event(eventName, new Date().getTime(), properties);
         track(event);
     }
 
@@ -108,7 +114,7 @@ public class AppMetr {
         boolean result = false;
         if (batch != null) {
             try {
-                result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeGzip(batch));
+                result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeJsonGzip(batch));
                 if (result) batchPersister.remove();
             } catch (IOException e) {
                 logger.error("IOException while sending request", e);

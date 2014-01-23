@@ -15,6 +15,7 @@ import java.util.Map;
 
 public class HttpRequestService {
     private static Logger logger = LoggerFactory.getLogger(HttpRequestService.class);
+    private static JsonParser jsonParser = new JsonParser();
     private final static String serverMethodName = "server.trackS2S";
 
     public static boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
@@ -50,9 +51,11 @@ public class HttpRequestService {
             }
 
             try {
-                JsonParser jsonParser = new JsonParser();
                 JsonObject responseJson = jsonParser.parse(result.toString()).getAsJsonObject();
-                String status = responseJson.get("response").getAsJsonObject().get("status").getAsString();
+                String status = null;
+                if (!isError(responseJson))
+                    status = responseJson.get("response").getAsJsonObject().get("status").getAsString();
+
                 if (status != null && status.compareTo("OK") == 0) {
                     return true;
                 }
@@ -69,6 +72,15 @@ public class HttpRequestService {
         return false;
     }
 
+    private static boolean isError(JsonObject response) {
+        try {
+            String errorMessage = response.get("error").getAsJsonObject().get("message").getAsString();
+            logger.warn("Cant send batch: " + errorMessage);
+            return true;
+        } catch (NullPointerException e) {
+            return false;
+        }
+    }
 
     private static String makeQueryString(Map<String, String> params) {
         StringBuilder queryBuilder = new StringBuilder();

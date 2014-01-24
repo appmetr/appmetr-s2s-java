@@ -21,6 +21,7 @@ public class AppMetr {
 
     private final String token;
     private final String url;
+    private boolean stopped = false;
 
     private AtomicInteger eventsSize = new AtomicInteger(0);
     private final ArrayList<Event> eventList = new ArrayList<Event>();
@@ -29,10 +30,10 @@ public class AppMetr {
     protected AppMetrTimer httpUploadTimer;
 
     private static final int MILLIS_PER_MINUTE = 1000 * 60;
-    private static final long FLUSH_PERIOD = 1000 * 10;//TODO: change
+    private static final long FLUSH_PERIOD = 1000 * 10 * 99999;//TODO: change
     private static final long UPLOAD_PERIOD = 1000 * 10;//TODO: change
 
-    private static final int MAX_EVENTS_SIZE = 1024 * 500;
+    private static final int MAX_EVENTS_SIZE = 1024 * 500 * 20;
 
     private BatchPersister batchPersister;
 
@@ -66,13 +67,20 @@ public class AppMetr {
     }
 
     public void track(Event newEvent) {
+        if(stopped){
+            throw new RuntimeException("Trying to track after stop!");
+        }
+
         try {
+            boolean flushNeeded;
             synchronized (eventList) {
                 eventsSize.addAndGet(newEvent.calcApproximateSize());
                 eventList.add(newEvent);
-            }
 
-            if (isNeedToFlush()) {
+                flushNeeded = isNeedToFlush();
+            }
+            if (flushNeeded) {
+                eventsSize.set(0);
                 eventFlushTimer.trigger();
             }
         } catch (Exception error) {
@@ -88,7 +96,6 @@ public class AppMetr {
         synchronized (eventList) {
             copyEvent = new ArrayList<Event>(eventList);
             eventList.clear();
-            eventsSize.set(0);
         }
 
         if (copyEvent != null && copyEvent.size() > 0) {
@@ -128,7 +135,11 @@ public class AppMetr {
     }
 
     public void stop() {
+        stopped = true;
+
         eventFlushTimer.stop();
         httpUploadTimer.stop();
+
+        flush();
     }
 }

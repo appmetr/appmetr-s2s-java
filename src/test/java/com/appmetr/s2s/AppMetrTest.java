@@ -1,17 +1,15 @@
-import com.appmetr.s2s.AppMetr;
+package com.appmetr.s2s;
+
 import com.appmetr.s2s.persister.FileBatchPersister;
+import junit.framework.TestCase;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Random;
 
-public class SomeTest {
+public class AppMetrTest extends TestCase {
 
-    public static void main(String[] args) throws IOException {
-        testFilePersister();
-    }
-
-    private static void testFilePersister(){
+    public void testPersister(){
         AppMetr appMetr = new AppMetr("bf099ce8-605a-40c6-b98c-b67c63eb1848", "http://localhost/api", new FileBatchPersister("/Users/pronvis/!batches"));
         for (int i = 0; i < 10001; i++){
             HashMap<String, Object> properties = new HashMap<String, Object>();
@@ -21,6 +19,7 @@ public class SomeTest {
             }
             appMetr.track("event#"+i%100, properties);
         }
+        appMetr.stop();
     }
 
     private static void pushSomeEvents(){
@@ -62,6 +61,4 @@ public class SomeTest {
         }
         return new String(text);
     }
-
-
 }

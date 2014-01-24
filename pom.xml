@@ -14,7 +14,6 @@
         <connection>scm:git:ssh://git@github.com/appmetr/appmetr-s2s-java.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/appmetr/appmetr-s2s-java.git</developerConnection>
         <url>http://github.com/appmetr/appmetr-s2s-java</url>
-        <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>

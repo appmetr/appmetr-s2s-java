@@ -30,8 +30,8 @@ public class AppMetr {
     protected AppMetrTimer httpUploadTimer;
 
     private static final int MILLIS_PER_MINUTE = 1000 * 60;
-    private static final long FLUSH_PERIOD = 1000 * 10 * 99999;//TODO: change
-    private static final long UPLOAD_PERIOD = 1000 * 10;//TODO: change
+    private static final long FLUSH_PERIOD = MILLIS_PER_MINUTE / 2;
+    private static final long UPLOAD_PERIOD = MILLIS_PER_MINUTE / 2;
 
     private static final int MAX_EVENTS_SIZE = 1024 * 500 * 20;
 
@@ -67,7 +67,7 @@ public class AppMetr {
     }
 
     public void track(Event newEvent) {
-        if(stopped){
+        if (stopped) {
             throw new RuntimeException("Trying to track after stop!");
         }
 

@@ -14,6 +14,7 @@ public interface BatchPersister {
 
     /**
      * Persist list of events as Batch.
+     *
      * @param eventList list of events.
      */
     public void persist(List<Event> eventList);

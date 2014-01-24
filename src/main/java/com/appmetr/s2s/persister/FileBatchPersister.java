@@ -117,7 +117,7 @@ public class FileBatchPersister implements BatchPersister {
 
         BufferedInputStream in = null;
         try {
-            in = new BufferedInputStream(new FileInputStream(batchFile));//todo: закроется ли fileInputStream ?
+            in = new BufferedInputStream(new FileInputStream(batchFile));
 
             byte[] nextBatchLength = new byte[BATCHSIZE_BYTES_COUNT];
             in.read(nextBatchLength);

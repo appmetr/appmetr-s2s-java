@@ -2,7 +2,7 @@ package com.appmetr.s2s;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.oracle.javafx.jmx.json.JSONException;
+import com.google.gson.JsonSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,7 @@ public class HttpRequestService {
                 if (status != null && status.compareTo("OK") == 0) {
                     return true;
                 }
-            } catch (JSONException jsonError) {
+            } catch (JsonSyntaxException jsonError) {
                 logger.warn("Json exception", jsonError);
             }
 

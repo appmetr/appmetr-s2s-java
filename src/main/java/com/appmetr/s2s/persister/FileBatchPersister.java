@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class FileBatchPersister implements BatchPersister {
-    private final static Logger logger = LoggerFactory.getLogger(BatchPersister.class);
+    private final static Logger logger = LoggerFactory.getLogger(FileBatchPersister.class);
 
     private final Object writeLock = new Object();
     private final Object readLock = new Object();

@@ -10,14 +10,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class AppMetr {
     protected static final Logger logger = LoggerFactory.getLogger(AppMetr.class);
 
-    protected final Lock flushLock = new ReentrantLock();
-    protected final Lock uploadLock = new ReentrantLock();
+    protected final Object flushLock = new Object();
+    protected final Object uploadLock = new Object();
 
     private final String token;
     private final String url;
@@ -89,24 +87,24 @@ public class AppMetr {
     }
 
     protected void flush() {
-        flushLock.lock();
-        logger.info("Flushing started");
+        synchronized (flushLock) {
+            logger.info("Flushing started");
 
-        ArrayList<Event> copyEvent;
-        synchronized (eventList) {
-            copyEvent = new ArrayList<Event>(eventList);
-            eventList.clear();
+            ArrayList<Event> copyEvent;
+            synchronized (eventList) {
+                copyEvent = new ArrayList<Event>(eventList);
+                eventList.clear();
+            }
+
+            if (copyEvent != null && copyEvent.size() > 0) {
+                batchPersister.persist(copyEvent);
+                httpUploadTimer.trigger();
+            } else {
+                logger.info("Nothing to flush");
+            }
+
+            logger.info("Flushing completed");
         }
-
-        if (copyEvent != null && copyEvent.size() > 0) {
-            batchPersister.persist(copyEvent);
-            httpUploadTimer.trigger();
-        } else {
-            logger.info("Nothing to flush");
-        }
-
-        logger.info("Flushing completed");
-        flushLock.unlock();
     }
 
     protected boolean isNeedToFlush() {
@@ -114,31 +112,35 @@ public class AppMetr {
     }
 
     protected void upload() {
-        uploadLock.lock();
-        logger.info("Upload starting");
+        synchronized (uploadLock) {
+            logger.info("Upload starting");
 
-        Batch batch = batchPersister.getNext();
-        boolean result = false;
-        if (batch != null) {
-            try {
-                result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeJsonGzip(batch));
-                if (result) batchPersister.remove();
-            } catch (IOException e) {
-                logger.error("IOException while sending request", e);
+            Batch batch = batchPersister.getNext();
+            boolean result = false;
+            if (batch != null) {
+                try {
+                    result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeJsonGzip(batch));
+                    if (result) batchPersister.remove();
+                } catch (IOException e) {
+                    logger.error("IOException while sending request", e);
+                }
+            } else {
+                logger.info("Nothing to upload");
             }
-        } else {
-            logger.info("Nothing to upload");
-        }
 
-        logger.info(String.format("Upload completed, status: %s", result ? "success" : "fails"));
-        uploadLock.unlock();
+            logger.info(String.format("Upload completed, status: %s", result ? "success" : "fails"));
+        }
     }
 
     public void stop() {
         stopped = true;
 
-        eventFlushTimer.stop();
-        httpUploadTimer.stop();
+        synchronized (flushLock){
+            eventFlushTimer.stop();
+        }
+        synchronized (uploadLock){
+            httpUploadTimer.stop();
+        }
 
         flush();
     }

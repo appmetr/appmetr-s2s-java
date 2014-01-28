@@ -10,12 +10,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class AppMetr {
     protected static final Logger logger = LoggerFactory.getLogger(AppMetr.class);
 
-    protected final Object flushLock = new Object();
-    protected final Object uploadLock = new Object();
+    protected final ReentrantLock flushLock = new ReentrantLock();
+    protected final ReentrantLock uploadLock = new ReentrantLock();
 
     private final String token;
     private final String url;
@@ -87,7 +88,8 @@ public class AppMetr {
     }
 
     protected void flush() {
-        synchronized (flushLock) {
+        flushLock.lock();
+        try {
             logger.info("Flushing started");
 
             ArrayList<Event> copyEvent;
@@ -104,6 +106,8 @@ public class AppMetr {
             }
 
             logger.info("Flushing completed");
+        } finally {
+            flushLock.unlock();
         }
     }
 
@@ -112,7 +116,8 @@ public class AppMetr {
     }
 
     protected void upload() {
-        synchronized (uploadLock) {
+        uploadLock.lock();
+        try {
             logger.info("Upload starting");
 
             Batch batch = batchPersister.getNext();
@@ -129,17 +134,26 @@ public class AppMetr {
             }
 
             logger.info(String.format("Upload completed, status: %s", result ? "success" : "fails"));
+        } finally {
+            uploadLock.lock();
         }
     }
 
     public void stop() {
         stopped = true;
 
-        synchronized (uploadLock){
+        uploadLock.lock();
+        try {
             httpUploadTimer.stop();
+        } finally {
+            uploadLock.lock();
         }
-        synchronized (flushLock){
+
+        flushLock.lock();
+        try {
             eventFlushTimer.stop();
+        } finally {
+            flushLock.unlock();
         }
 
         flush();

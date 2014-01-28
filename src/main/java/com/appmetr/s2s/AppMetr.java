@@ -135,11 +135,11 @@ public class AppMetr {
     public void stop() {
         stopped = true;
 
-        synchronized (flushLock){
-            eventFlushTimer.stop();
-        }
         synchronized (uploadLock){
             httpUploadTimer.stop();
+        }
+        synchronized (flushLock){
+            eventFlushTimer.stop();
         }
 
         flush();

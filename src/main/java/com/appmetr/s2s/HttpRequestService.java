@@ -10,6 +10,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +23,7 @@ public class HttpRequestService {
         Map<String, String> params = new HashMap<String, String>(2);
         params.put("method", serverMethodName);
         params.put("token", token);
+        params.put("timestamp", String.valueOf(new Date().getTime()));
 
         URL url = new URL(httpURL + "?" + makeQueryString(params));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();

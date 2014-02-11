@@ -14,8 +14,8 @@ public class Event {
         this(event, new Date().getTime(), new HashMap<String, Object>());
     }
 
-    public Event(String event, long timestamp){
-        this(event, timestamp, new HashMap<String, Object>());
+    public Event(String event, Map<String, Object> properties){
+        this(event, new Date().getTime(), properties);
     }
 
     public Event(String event, long timestamp, Map<String, Object> properties) {

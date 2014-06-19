@@ -1,6 +1,5 @@
 .idea
-sources/*/target
-sources/*/*/target
+target
 *.iml
 *.ipr
 *.iws

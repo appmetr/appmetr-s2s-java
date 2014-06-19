@@ -135,7 +135,7 @@ public class AppMetr {
 
             logger.info(String.format("Upload completed, status: %s", result ? "success" : "fails"));
         } finally {
-            uploadLock.lock();
+            uploadLock.unlock();
         }
     }
 
@@ -146,7 +146,7 @@ public class AppMetr {
         try {
             httpUploadTimer.stop();
         } finally {
-            uploadLock.lock();
+            uploadLock.unlock();
         }
 
         flushLock.lock();

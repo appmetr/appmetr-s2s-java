@@ -9,13 +9,22 @@ public class Event {
     private String event;
     private long timestamp;
     private Map<String, Object> properties;
+    private String userId;
 
     public Event(String event){
         this(event, new Date().getTime(), new HashMap<String, Object>());
     }
 
+    public Event(String event, String userId){
+        this(event, new Date().getTime(), new HashMap<String, Object>(), userId);
+    }
+
     public Event(String event, Map<String, Object> properties){
         this(event, new Date().getTime(), properties);
+    }
+
+    public Event(String event, Map<String, Object> properties, String userId){
+        this(event, new Date().getTime(), properties, userId);
     }
 
     public Event(String event, long timestamp, Map<String, Object> properties) {
@@ -24,8 +33,19 @@ public class Event {
         this.properties = properties;
     }
 
+    public Event(String event, long timestamp, Map<String, Object> properties, String userId) {
+        this.event = event;
+        this.timestamp = timestamp;
+        this.properties = properties;
+        this.userId = userId;
+    }
+
     public String getEventName() {
         return event;
+    }
+
+    public String getUserId() {
+        return userId;
     }
 
     public Map<String, Object> getProperties() {
@@ -39,6 +59,9 @@ public class Event {
     public int calcApproximateSize() {
         int propertiesSize = 40 + (40 * properties.size()); //40 - Map size and 40 - each entry overhead
         propertiesSize += String.valueOf(timestamp).length() * 2 + 24 + 16;
+        if(userId != null) {
+            propertiesSize += String.valueOf(userId).length() * 2 + 24 + 16;
+        }
 
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
             propertiesSize += entry.getKey().length() * 2 + 24 + 16;    //24 - String object size, 16 - char[]

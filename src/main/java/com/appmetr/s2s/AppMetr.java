@@ -65,6 +65,11 @@ public class AppMetr {
         track(event);
     }
 
+    public void track(String eventName, Map<String, Object> properties, String userId) {
+        Event event = new Event(eventName, new Date().getTime(), properties, userId);
+        track(event);
+    }
+
     public void track(Event newEvent) {
         if (stopped) {
             throw new RuntimeException("Trying to track after stop!");

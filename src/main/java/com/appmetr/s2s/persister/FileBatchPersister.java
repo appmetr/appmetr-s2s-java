@@ -1,8 +1,8 @@
 package com.appmetr.s2s.persister;
 
 import com.appmetr.s2s.Batch;
-import com.appmetr.s2s.Event;
 import com.appmetr.s2s.SerializationUtils;
+import com.appmetr.s2s.events.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,10 +156,10 @@ public class FileBatchPersister implements BatchPersister {
         }
     }
 
-    @Override public void persist(List<Event> eventList) {
+    @Override public void persist(List<Action> actionList) {
         synchronized (writeLock) {
 
-            Batch batch = new Batch(lastBatchId, eventList);
+            Batch batch = new Batch(lastBatchId, actionList);
             byte[] serializedBatch = SerializationUtils.serializeJsonGzip(batch);
 
             File file = getBatchFile(lastBatchId);

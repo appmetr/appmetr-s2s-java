@@ -1,5 +1,6 @@
 package com.appmetr.s2s;
 
+import com.appmetr.s2s.events.Event;
 import com.appmetr.s2s.persister.FileBatchPersister;
 
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ public class AppMetrTest {
             for (int j = 0; j < 25; j++) {
                 properties.put(String.valueOf(j), getRandomObject());
             }
-            appMetr.track("event#" + i % 100, properties);
+            appMetr.track(new Event("event#" + i % 100).setProperties(properties));
         }
         appMetr.stop();
     }
@@ -33,7 +34,7 @@ public class AppMetrTest {
             for (int j = 0; j < 5; j++) {
                 properties.put(String.valueOf(j), getRandomObject());
             }
-            appMetr.track("event#" + i, properties);
+            appMetr.track(new Event("event#" + i).setProperties(properties));
         }
     }
 

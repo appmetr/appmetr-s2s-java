@@ -1,5 +1,6 @@
 package com.appmetr.s2s;
 
+import com.appmetr.s2s.events.Action;
 import com.appmetr.s2s.persister.BatchPersister;
 import com.appmetr.s2s.persister.MemoryBatchPersister;
 import org.slf4j.Logger;
@@ -7,8 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -23,7 +22,7 @@ public class AppMetr {
     private boolean stopped = false;
 
     private AtomicInteger eventsSize = new AtomicInteger(0);
-    private final ArrayList<Event> eventList = new ArrayList<Event>();
+    private final ArrayList<Action> actionList = new ArrayList<Action>();
 
     protected AppMetrTimer eventFlushTimer;
     protected AppMetrTimer httpUploadTimer;
@@ -60,26 +59,16 @@ public class AppMetr {
         this(token, url, null);
     }
 
-    public void track(String eventName, Map<String, Object> properties) {
-        Event event = new Event(eventName, new Date().getTime(), properties);
-        track(event);
-    }
-
-    public void track(String eventName, Map<String, Object> properties, String userId) {
-        Event event = new Event(eventName, new Date().getTime(), properties, userId);
-        track(event);
-    }
-
-    public void track(Event newEvent) {
+    public void track(Action newAction) {
         if (stopped) {
             throw new RuntimeException("Trying to track after stop!");
         }
 
         try {
             boolean flushNeeded;
-            synchronized (eventList) {
-                eventsSize.addAndGet(newEvent.calcApproximateSize());
-                eventList.add(newEvent);
+            synchronized (actionList) {
+                eventsSize.addAndGet(newAction.calcApproximateSize());
+                actionList.add(newAction);
 
                 flushNeeded = isNeedToFlush();
             }
@@ -97,14 +86,14 @@ public class AppMetr {
         try {
             logger.info("Flushing started");
 
-            ArrayList<Event> copyEvent;
-            synchronized (eventList) {
-                copyEvent = new ArrayList<Event>(eventList);
-                eventList.clear();
+            ArrayList<Action> copyAction;
+            synchronized (actionList) {
+                copyAction = new ArrayList<Action>(actionList);
+                actionList.clear();
             }
 
-            if (copyEvent != null && copyEvent.size() > 0) {
-                batchPersister.persist(copyEvent);
+            if (copyAction != null && copyAction.size() > 0) {
+                batchPersister.persist(copyAction);
                 httpUploadTimer.trigger();
             } else {
                 logger.info("Nothing to flush");

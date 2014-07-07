@@ -3,7 +3,7 @@ package com.appmetr.s2s.events;
 import java.util.Date;
 import java.util.Map;
 
-public class Action {
+public abstract class Action {
     private String action;
     private long timestamp = new Date().getTime();
     private Map<String, Object> properties;

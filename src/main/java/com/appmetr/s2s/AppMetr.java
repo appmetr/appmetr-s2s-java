@@ -127,7 +127,7 @@ public class AppMetr {
                 logger.info("Nothing to upload");
             }
 
-            logger.info(String.format("Upload completed, status: %s", result ? "success" : "fails"));
+            logger.info(String.format("Upload completed, status: %s", result ? "success" : "fail"));
         } finally {
             uploadLock.unlock();
         }

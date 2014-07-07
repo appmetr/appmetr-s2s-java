@@ -1,12 +1,13 @@
 package com.appmetr.s2s.events;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 public abstract class Action {
     private String action;
     private long timestamp = new Date().getTime();
-    private Map<String, Object> properties;
+    private Map<String, Object> properties = new HashMap<String, Object>();
     private String userId;
 
     public Action(String action) {

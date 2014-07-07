@@ -7,23 +7,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class FileBatchPersister implements BatchPersister {
     private final static Logger logger = LoggerFactory.getLogger(FileBatchPersister.class);
 
-    private final Object writeLock = new Object();
-    private final Object readLock = new Object();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     private File path;
     private int firstFileId;
     private int lastBatchId;
-
-    private int BATCHSIZE_BYTES_COUNT = 100;
 
     private final File batchIdFileSaver;
     private final String BATCH_FILE_NAME = "batchFile#";
@@ -59,13 +57,15 @@ public class FileBatchPersister implements BatchPersister {
                 logger.warn("Exception while reading from batchIdFileSaver: ", e);
             } finally {
                 try {
-                    br.close();
+                    if (br != null) {
+                        br.close();
+                    }
                 } catch (IOException e) {
                     logger.warn("Exception while closing batchIdFileSaver file: ", e);
                 }
 
-                return batchId;
             }
+            return batchId;
         } else {
             Batch lastBatch = getBatchFromFile(getBatchFile(lastBatchId));
             return lastBatch == null ? 0 : lastBatch.getBatchId();
@@ -88,7 +88,9 @@ public class FileBatchPersister implements BatchPersister {
             logger.warn("(updateLastBatchId) Exception while write to batchIdFileSaver file: ", e);
         } finally {
             try {
-                bw.close();
+                if (bw != null) {
+                    bw.close();
+                }
             } catch (IOException e) {
                 logger.warn("(updateLastBatchId) Exception while closing batchIdFileSaver file: ", e);
             }
@@ -119,10 +121,7 @@ public class FileBatchPersister implements BatchPersister {
         try {
             in = new BufferedInputStream(new FileInputStream(batchFile));
 
-            byte[] nextBatchLength = new byte[BATCHSIZE_BYTES_COUNT];
-            in.read(nextBatchLength);
-
-            byte[] serializedBatch = new byte[ByteBuffer.wrap(nextBatchLength).getInt()];
+            byte[] serializedBatch = new byte[in.available()];
             in.read(serializedBatch);
 
             return SerializationUtils.deserializeJsonGzip(serializedBatch);
@@ -130,7 +129,9 @@ public class FileBatchPersister implements BatchPersister {
             logger.warn("(getBatchFromFile) Exception while getting batch from file " + batchFile + ": ", e);
         } finally {
             try {
-                in.close();
+                if (in != null) {
+                    in.close();
+                }
             } catch (IOException e) {
                 logger.warn("(getBatchFromFile) Exception while closing batch file " + batchFile + ": ", e);
             }
@@ -148,19 +149,21 @@ public class FileBatchPersister implements BatchPersister {
     }
 
     @Override public Batch getNext() {
-        synchronized (readLock) {
-
+        lock.readLock().lock();
+        try {
             Batch batch = getBatchFromFile(getBatchFile(firstFileId));
-
             return batch;
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
     @Override public void persist(List<Action> actionList) {
-        synchronized (writeLock) {
+        lock.writeLock().lock();
+        try {
 
             Batch batch = new Batch(lastBatchId, actionList);
-            byte[] serializedBatch = SerializationUtils.serializeJsonGzip(batch);
+            byte[] serializedBatch = SerializationUtils.serializeJsonGzip(batch, true);
 
             File file = getBatchFile(lastBatchId);
 
@@ -171,8 +174,6 @@ public class FileBatchPersister implements BatchPersister {
                 }
 
                 bos = new BufferedOutputStream(new FileOutputStream(file));
-                byte[] serializedBatchLength = ByteBuffer.allocate(BATCHSIZE_BYTES_COUNT).putInt(serializedBatch.length).array();
-                bos.write(serializedBatchLength);
                 bos.write(serializedBatch);
                 bos.flush();
 
@@ -188,13 +189,18 @@ public class FileBatchPersister implements BatchPersister {
                     }
                 }
             }
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 
     @Override public void remove() {
-        synchronized (readLock) {
+        lock.writeLock().lock();
+        try {
             getBatchFile(firstFileId).delete();
             firstFileId++;
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 

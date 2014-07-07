@@ -118,7 +118,7 @@ public class AppMetr {
             boolean result = false;
             if (batch != null) {
                 try {
-                    result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeJsonGzip(batch));
+                    result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeJsonGzip(batch, false));
                     if (result) batchPersister.remove();
                 } catch (IOException e) {
                     logger.error("IOException while sending request", e);

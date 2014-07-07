@@ -1,5 +1,7 @@
 package com.appmetr.s2s;
 
+import com.appmetr.s2s.events.Action;
+import com.appmetr.s2s.events.ActionAdapter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
@@ -16,20 +18,21 @@ public class SerializationUtils {
     private static Logger logger = LoggerFactory.getLogger(SerializationUtils.class);
 
     private static Gson gson = new GsonBuilder().create();
+    private static Gson gsonTyped = new GsonBuilder().registerTypeHierarchyAdapter(Action.class, new ActionAdapter()).create();
 
-    public static byte[] serializeJsonGzip(Batch batch) {
+    public static byte[] serializeJsonGzip(Batch batch, boolean withType) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DeflaterOutputStream gzos = null;
 
         try {
             gzos = new DeflaterOutputStream(baos, new Deflater(Deflater.BEST_COMPRESSION, true));
-            gzos.write(gson.toJsonTree(batch).toString().getBytes());
+            gzos.write(withType ? gsonTyped.toJson(batch).getBytes() : gson.toJson(batch).getBytes());
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
             if (gzos != null) try { gzos.close(); } catch (IOException ioException) {
                 logger.info("Can't close gzip output stream", ioException);
-            } ;
+            }
         }
 
         return baos.toByteArray();
@@ -45,7 +48,7 @@ public class SerializationUtils {
             inflateStream.finish();
             inflateStream.close();
 
-            return gson.fromJson(inflatedByteStream.toString(), Batch.class);
+            return gsonTyped.fromJson(inflatedByteStream.toString(), Batch.class);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

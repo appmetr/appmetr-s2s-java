@@ -12,7 +12,7 @@ public class ActionAdapter implements JsonSerializer<Action>, JsonDeserializer<A
 
     @Override public JsonElement serialize(Action action, Type type, JsonSerializationContext context) {
         JsonObject result = new JsonObject();
-        result.addProperty(CLASS_NAME, action.getClass().getCanonicalName());
+        result.addProperty(CLASS_NAME, action.getClass().getSimpleName());
         result.add(INSTANCE, gson.toJsonTree(action));
 
         return result;
@@ -24,7 +24,7 @@ public class ActionAdapter implements JsonSerializer<Action>, JsonDeserializer<A
             return context.deserialize(jsonElement, type);
         } else {
             try {
-                Class cls = Class.forName(obj.get(CLASS_NAME).getAsString());
+                Class cls = Class.forName("com.appmetr.s2s.events." + obj.get(CLASS_NAME).getAsString());
 
                 return gson.<Action>fromJson(obj.get(INSTANCE), cls);
             } catch (ClassNotFoundException e) {

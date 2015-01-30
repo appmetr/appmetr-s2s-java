@@ -44,14 +44,14 @@ public class AppMetr {
             @Override public void run() {
                 flush();
             }
-        });
+        }, "FlushTask");
         new Thread(eventFlushTimer).start();
 
         httpUploadTimer = new AppMetrTimer(UPLOAD_PERIOD, new Runnable() {
             @Override public void run() {
                 upload();
             }
-        });
+        }, "UploadTask");
         new Thread(httpUploadTimer).start();
     }
 

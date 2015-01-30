@@ -67,8 +67,7 @@ public class FileBatchPersister implements BatchPersister {
             }
             return batchId;
         } else {
-            Batch lastBatch = getBatchFromFile(getBatchFile(lastBatchId));
-            return lastBatch == null ? 0 : lastBatch.getBatchId();
+            return 0;
         }
     }
 

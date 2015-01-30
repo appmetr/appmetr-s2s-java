@@ -20,15 +20,21 @@ public class AppMetrTimer implements Runnable {
     private final long TIMER_PERIOD;
 
     private final Runnable onTimer;
+    private final String jobName;
 
     public AppMetrTimer(long period, Runnable onTimer) {
+        this(period, onTimer, "AppMetrTimer");
+    }
+
+    public AppMetrTimer(long period, Runnable onTimer, String jobName) {
         TIMER_PERIOD = period;
         this.onTimer = onTimer;
+        this.jobName = jobName;
     }
 
     @Override public void run() {
         pollingThread = Thread.currentThread();
-        logger.info("AppMetrTimer started!");
+        logger.info(jobName + " started!");
 
         while (!pollingThread.isInterrupted()) {
             lock.lock();
@@ -36,20 +42,20 @@ public class AppMetrTimer implements Runnable {
             try {
                 trigger.await(TIMER_PERIOD, TimeUnit.MILLISECONDS);
 
-                logger.info("AppMetrTimer - run flusher");
+                logger.info("%s triggered", jobName);
                 onTimer.run();
             } catch (InterruptedException ie) {
-                logger.warn("Interrupted while polling the queue. Stop polling");
+                logger.warn("Interrupted while polling the queue. Stop polling for %s", jobName);
 
                 pollingThread.interrupt();
             } catch (Exception e) {
-                logger.error("Error while flushing events", e);
+                logger.error(String.format("Error in %s", jobName), e);
             } finally {
                 lock.unlock();
             }
         }
 
-        logger.info("AppMetrTimer stopped!");
+        logger.info("%s stopped!", jobName);
     }
 
     public void trigger() {
@@ -63,7 +69,7 @@ public class AppMetrTimer implements Runnable {
     }
 
     public void stop() {
-        logger.info("AppMetrTimer stop triggered!");
+        logger.info("%s stop triggered!", jobName);
 
         if (pollingThread != null) {
             pollingThread.interrupt();

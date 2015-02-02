@@ -84,7 +84,7 @@ public class AppMetr {
     protected void flush() {
         flushLock.lock();
         try {
-            logger.info("Flushing started");
+            logger.debug("Flushing started for %s actions", actionList.size());
 
             ArrayList<Action> copyAction;
             synchronized (actionList) {
@@ -92,7 +92,7 @@ public class AppMetr {
                 actionList.clear();
             }
 
-            if (copyAction != null && copyAction.size() > 0) {
+            if (copyAction.size() > 0) {
                 batchPersister.persist(copyAction);
                 httpUploadTimer.trigger();
             } else {
@@ -112,22 +112,31 @@ public class AppMetr {
     protected void upload() {
         uploadLock.lock();
         try {
-            logger.info("Upload starting");
+            logger.debug("Upload starting");
 
-            Batch batch = batchPersister.getNext();
-            boolean result = false;
-            if (batch != null) {
+            Batch batch;
+            int uploadedBatchCounter = 0;
+            int allBatchCounter = 0;
+            while ((batch = batchPersister.getNext()) != null) {
+                allBatchCounter++;
+
+                boolean result;
                 try {
                     result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeJsonGzip(batch, false));
-                    if (result) batchPersister.remove();
+                    if (result) {
+                        logger.debug("Batch {0} successfully uploaded", batch.getBatchId());
+                        batchPersister.remove();
+                    } else {
+                        logger.error("Error while upload batch %s", batch.getBatchId());
+                        break;
+                    }
                 } catch (IOException e) {
                     logger.error("IOException while sending request", e);
+                    break;
                 }
-            } else {
-                logger.info("Nothing to upload");
             }
 
-            logger.info(String.format("Upload completed, status: %s", result ? "success" : "fail"));
+            logger.info("%s from %s batches uploaded", uploadedBatchCounter, allBatchCounter);
         } finally {
             uploadLock.unlock();
         }

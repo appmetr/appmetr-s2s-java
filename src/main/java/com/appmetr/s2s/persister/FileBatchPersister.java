@@ -8,9 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -19,8 +17,9 @@ public class FileBatchPersister implements BatchPersister {
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
+    private Queue<Integer> fileIds;
+
     private File path;
-    private int firstFileId;
     private int lastBatchId;
 
     private final File batchIdFileSaver;
@@ -40,35 +39,7 @@ public class FileBatchPersister implements BatchPersister {
 
         batchIdFileSaver = new File(path.getAbsolutePath() + "/lastBatchId");
 
-        lastBatchId = getLastBatchId();
-
-        fillFirstFileId();
-    }
-
-    private int getLastBatchId() {
-        if (batchIdFileSaver.exists() && batchIdFileSaver.length() > 0) {
-            int batchId = 0;
-
-            BufferedReader br = null;
-            try {
-                br = new BufferedReader(new InputStreamReader(new FileInputStream(batchIdFileSaver), Charset.forName("UTF-8")));
-                batchId = Integer.parseInt(br.readLine());
-            } catch (IOException e) {
-                logger.warn("Exception while reading from batchIdFileSaver: ", e);
-            } finally {
-                try {
-                    if (br != null) {
-                        br.close();
-                    }
-                } catch (IOException e) {
-                    logger.warn("Exception while closing batchIdFileSaver file: ", e);
-                }
-
-            }
-            return batchId;
-        } else {
-            return 0;
-        }
+        initPersistedFiles();
     }
 
     private void updateLastBatchId() {
@@ -96,21 +67,46 @@ public class FileBatchPersister implements BatchPersister {
         }
     }
 
-    private void fillFirstFileId() {
-        ArrayList<String> batchFiles = new ArrayList<String>();
+    private void initPersistedFiles() {
+        List<Integer> ids = new ArrayList<Integer>();
         for (File file : path.listFiles()) {
             String fName = file.getName();
             if (fName.startsWith(BATCH_FILE_NAME)) {
-                batchFiles.add(fName);
+                ids.add(getFileId(file.getName()));
             }
         }
-        Collections.sort(batchFiles);
 
-        if (batchFiles.size() > 0) {
-            firstFileId = getFileId(batchFiles.get(0));
+        Collections.sort(ids);
+
+        if (batchIdFileSaver.exists() && batchIdFileSaver.length() > 0) {
+            int batchId = 0;
+
+            BufferedReader br = null;
+            try {
+                br = new BufferedReader(new InputStreamReader(new FileInputStream(batchIdFileSaver), Charset.forName("UTF-8")));
+                batchId = Integer.parseInt(br.readLine());
+            } catch (IOException e) {
+                logger.warn("Exception while reading from batchIdFileSaver: ", e);
+            } finally {
+                try {
+                    if (br != null) {
+                        br.close();
+                    }
+                } catch (IOException e) {
+                    logger.warn("Exception while closing batchIdFileSaver file: ", e);
+                }
+
+            }
+            lastBatchId = batchId;
+        } else if (ids.size() > 0) {
+            lastBatchId = ids.get(ids.size() - 1);
         } else {
-            firstFileId = lastBatchId;
+            lastBatchId = 0;
         }
+
+        logger.info("Init lastBatchId with %s", lastBatchId);
+
+        fileIds = new ArrayDeque<Integer>(ids);
     }
 
     private Batch getBatchFromFile(File batchFile) {
@@ -139,8 +135,8 @@ public class FileBatchPersister implements BatchPersister {
         return null;
     }
 
-    private File getBatchFile(int fileId) {
-        return new File(path.getAbsolutePath() + "/" + BATCH_FILE_NAME + String.format(DIGITAL_FORMAT, fileId));
+    private File getBatchFile(Integer fileId) {
+        return fileId == null ? null : new File(path.getAbsolutePath() + "/" + BATCH_FILE_NAME + String.format(DIGITAL_FORMAT, fileId));
     }
 
     private int getFileId(String batchFileName) {
@@ -150,8 +146,13 @@ public class FileBatchPersister implements BatchPersister {
     @Override public Batch getNext() {
         lock.readLock().lock();
         try {
-            Batch batch = getBatchFromFile(getBatchFile(firstFileId));
-            return batch;
+            Integer batchId = fileIds.peek();
+
+            if (batchId == null) {
+                return null;
+            }
+
+            return getBatchFromFile(getBatchFile(batchId));
         } finally {
             lock.readLock().unlock();
         }
@@ -176,6 +177,7 @@ public class FileBatchPersister implements BatchPersister {
                 bos.write(serializedBatch);
                 bos.flush();
 
+                fileIds.add(lastBatchId);
                 updateLastBatchId();
             } catch (IOException e) {
                 logger.warn("(Persist) Exception while persist batch: ", e);
@@ -196,8 +198,7 @@ public class FileBatchPersister implements BatchPersister {
     @Override public void remove() {
         lock.writeLock().lock();
         try {
-            getBatchFile(firstFileId).delete();
-            firstFileId++;
+            getBatchFile(fileIds.poll()).delete();
         } finally {
             lock.writeLock().unlock();
         }

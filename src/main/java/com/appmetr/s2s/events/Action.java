@@ -52,13 +52,9 @@ public abstract class Action {
         size += getStringLength(String.valueOf(timestamp));
         size += getStringLength(userId);
 
-        if (userId != null) {
-            size += userId.length() * 2 + 24 + 16;
-        }
-
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
             size += getStringLength(entry.getKey());
-            size += getStringLength(entry.getValue().toString());   //toString because sending this object via json
+            size += getStringLength(entry.getValue() != null ? entry.getValue().toString() : null);   //toString because sending this object via json
         }
 
         return 8 + size + 8; //8 - object header

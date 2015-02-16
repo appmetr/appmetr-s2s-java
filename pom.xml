@@ -6,7 +6,7 @@
     <groupId>com.appmetr</groupId>
     <artifactId>appmetr-s2s-java</artifactId>
     <packaging>jar</packaging>
-    <version>0.1.10</version>
+    <version>0.1.11-SNAPSHOT</version>
     <name>appmetr-s2s-java</name>
 
     <scm>

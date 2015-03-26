@@ -28,7 +28,7 @@ public class ActionAdapter implements JsonSerializer<Action>, JsonDeserializer<A
 
                 return gson.<Action>fromJson(obj.get(INSTANCE), cls);
             } catch (ClassNotFoundException e) {
-                return context.deserialize(jsonElement, type);
+                throw new RuntimeException("Couldn't find class " + obj.get(CLASS_NAME));
             }
         }
     }

@@ -55,7 +55,7 @@ public class FileBatchPersister implements BatchPersister {
             bw.write(String.valueOf(lastBatchId));
             bw.flush();
         } catch (IOException e) {
-            logger.warn("(updateLastBatchId) Exception while write to batchIdFileSaver file: ", e);
+            logger.error("(updateLastBatchId) Exception while write to batchIdFileSaver file: ", e);
         } finally {
             try {
                 if (bw != null) {
@@ -86,7 +86,7 @@ public class FileBatchPersister implements BatchPersister {
                 br = new BufferedReader(new InputStreamReader(new FileInputStream(batchIdFileSaver), Charset.forName("UTF-8")));
                 batchId = Integer.parseInt(br.readLine());
             } catch (IOException e) {
-                logger.warn("Exception while reading from batchIdFileSaver: ", e);
+                logger.error("Exception while reading from batchIdFileSaver: ", e);
             } finally {
                 try {
                     if (br != null) {
@@ -121,14 +121,14 @@ public class FileBatchPersister implements BatchPersister {
 
             return SerializationUtils.deserializeJsonGzip(serializedBatch);
         } catch (Exception e) {
-            logger.warn("(getBatchFromFile) Exception while getting batch from file " + batchFile + ": ", e);
+            logger.error("(getBatchFromFile) Exception while getting batch from file " + batchFile + ": ", e);
         } finally {
             try {
                 if (in != null) {
                     in.close();
                 }
             } catch (IOException e) {
-                logger.warn("(getBatchFromFile) Exception while closing batch file " + batchFile + ": ", e);
+                logger.error("(getBatchFromFile) Exception while closing batch file " + batchFile + ": ", e);
             }
         }
 
@@ -180,7 +180,7 @@ public class FileBatchPersister implements BatchPersister {
                 fileIds.add(lastBatchId);
                 updateLastBatchId();
             } catch (IOException e) {
-                logger.warn("(Persist) Exception while persist batch: ", e);
+                logger.error("(Persist) Exception while persist batch: ", e);
             } finally {
                 if (bos != null) {
                     try {

@@ -62,9 +62,8 @@ public class HttpRequestService {
                     return true;
                 }
             } catch (JsonSyntaxException jsonError) {
-                logger.warn("Json exception", jsonError);
+                logger.error("Json exception", jsonError);
             }
-
         } catch (Exception error) {
             logger.error("Server error", error);
         } finally {
@@ -77,7 +76,7 @@ public class HttpRequestService {
     private static boolean isError(JsonObject response) {
         try {
             String errorMessage = response.get("error").getAsJsonObject().get("message").getAsString();
-            logger.warn("Cant send batch: " + errorMessage);
+            logger.error("Cant send batch: " + errorMessage);
             return true;
         } catch (NullPointerException e) {
             return false;

@@ -42,10 +42,10 @@ public class AppMetrTimer implements Runnable {
             try {
                 trigger.await(TIMER_PERIOD, TimeUnit.MILLISECONDS);
 
-                logger.info("%s triggered", jobName);
+                logger.info(String.format("%s triggered", jobName));
                 onTimer.run();
             } catch (InterruptedException ie) {
-                logger.warn("Interrupted while polling the queue. Stop polling for %s", jobName);
+                logger.warn(String.format("Interrupted while polling the queue. Stop polling for %s", jobName));
 
                 pollingThread.interrupt();
             } catch (Exception e) {
@@ -55,7 +55,7 @@ public class AppMetrTimer implements Runnable {
             }
         }
 
-        logger.info("%s stopped!", jobName);
+        logger.info(String.format("%s stopped!", jobName));
     }
 
     public void trigger() {
@@ -69,7 +69,7 @@ public class AppMetrTimer implements Runnable {
     }
 
     public void stop() {
-        logger.info("%s stop triggered!", jobName);
+        logger.info(String.format("%s stop triggered!", jobName));
 
         if (pollingThread != null) {
             pollingThread.interrupt();

@@ -22,7 +22,7 @@ public class AppMetr {
     private boolean stopped = false;
 
     private AtomicInteger eventsSize = new AtomicInteger(0);
-    private final ArrayList<Action> actionList = new ArrayList<Action>();
+    private final ArrayList<Action> actionList = new ArrayList<>();
 
     protected AppMetrTimer eventFlushTimer;
     protected AppMetrTimer httpUploadTimer;
@@ -84,7 +84,7 @@ public class AppMetr {
     protected void flush() {
         flushLock.lock();
         try {
-            logger.debug("Flushing started for %s actions", actionList.size());
+            logger.debug(String.format("Flushing started for %s actions", actionList.size()));
 
             ArrayList<Action> copyAction;
             synchronized (actionList) {
@@ -117,17 +117,21 @@ public class AppMetr {
             Batch batch;
             int uploadedBatchCounter = 0;
             int allBatchCounter = 0;
+            long sendBatchesBytes = 0;
             while ((batch = batchPersister.getNext()) != null) {
                 allBatchCounter++;
 
                 boolean result;
                 try {
-                    result = HttpRequestService.sendRequest(url, token, SerializationUtils.serializeJsonGzip(batch, false));
+                    final byte[] batchBytes = SerializationUtils.serializeJsonGzip(batch, false);
+                    result = HttpRequestService.sendRequest(url, token, batchBytes);
                     if (result) {
-                        logger.debug("Batch {0} successfully uploaded", batch.getBatchId());
+                        logger.debug(String.format("Batch %s successfully uploaded", batch.getBatchId()));
                         batchPersister.remove();
+                        uploadedBatchCounter++;
+                        sendBatchesBytes += batchBytes.length;
                     } else {
-                        logger.error("Error while upload batch %s", batch.getBatchId());
+                        logger.error(String.format("Error while upload batch %s", batch.getBatchId()));
                         break;
                     }
                 } catch (IOException e) {
@@ -136,7 +140,7 @@ public class AppMetr {
                 }
             }
 
-            logger.info("%s from %s batches uploaded", uploadedBatchCounter, allBatchCounter);
+            logger.info(String.format("%s from %s batches uploaded. (%d bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes));
         } finally {
             uploadLock.unlock();
         }

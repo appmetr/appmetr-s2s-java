@@ -6,7 +6,7 @@
     <groupId>com.appmetr</groupId>
     <artifactId>appmetr-s2s-java</artifactId>
     <packaging>jar</packaging>
-    <version>0.1.10-SNAPSHOT</version>
+    <version>0.1.11-SNAPSHOT</version>
     <name>appmetr-s2s-java</name>
 
     <scm>
@@ -104,7 +104,10 @@
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration></plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>

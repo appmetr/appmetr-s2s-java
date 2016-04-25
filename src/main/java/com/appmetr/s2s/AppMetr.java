@@ -22,7 +22,7 @@ public class AppMetr {
     private boolean stopped = false;
 
     private AtomicInteger eventsSize = new AtomicInteger(0);
-    private final ArrayList<Action> actionList = new ArrayList<>();
+    private final ArrayList<Action> actionList = new ArrayList<Action>();
 
     protected AppMetrTimer eventFlushTimer;
     protected AppMetrTimer httpUploadTimer;

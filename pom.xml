@@ -6,7 +6,7 @@
     <groupId>com.appmetr</groupId>
     <artifactId>appmetr-s2s-java</artifactId>
     <packaging>jar</packaging>
-    <version>0.1.13-SNAPSHOT</version>
+    <version>0.1.14-SNAPSHOT</version>
     <name>appmetr-s2s-java</name>
 
     <scm>
@@ -140,4 +140,19 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>lib</id>
+        </profile>
+        <profile>
+            <id>console</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                    <version>1.7.5</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

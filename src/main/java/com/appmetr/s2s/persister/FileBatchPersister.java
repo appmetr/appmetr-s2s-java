@@ -14,6 +14,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class FileBatchPersister implements BatchPersister {
     private final static Logger logger = LoggerFactory.getLogger(FileBatchPersister.class);
+    private static final int BYTES_IN_MB = 1024 * 1024;
+    public static final int REBATCH_THRESHOLD_ITEM_COUNT = 1000;
+    public static final int REBATCH_THRESHOLD_FILE_SIZE = 1 * BYTES_IN_MB;
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -40,6 +43,7 @@ public class FileBatchPersister implements BatchPersister {
         batchIdFileSaver = new File(path.getAbsolutePath() + "/lastBatchId");
 
         initPersistedFiles();
+        rebatch();
     }
 
     private void updateLastBatchId() {
@@ -76,6 +80,7 @@ public class FileBatchPersister implements BatchPersister {
             }
         }
 
+
         Collections.sort(ids);
 
         if (batchIdFileSaver.exists() && batchIdFileSaver.length() > 0) {
@@ -104,9 +109,88 @@ public class FileBatchPersister implements BatchPersister {
             lastBatchId = 0;
         }
 
-        logger.info("Init lastBatchId with %s", lastBatchId);
+        logger.info(String.format("Init lastBatchId with %s", lastBatchId));
 
         fileIds = new ArrayDeque<Integer>(ids);
+        logger.info("Initialized "+ids.size()+" batches.");
+    }
+
+    public void rebatch() {
+        try {
+            lock.writeLock().lock();
+
+            final long rebatchingStart = System.currentTimeMillis();
+
+            final File[] batchFiles = path.listFiles();
+            boolean rebatchNeeded = false;
+            for (File batchFile : batchFiles) {
+                if (batchFile.length() > REBATCH_THRESHOLD_FILE_SIZE) {
+                    rebatchNeeded = true;
+                    logger.info("Rebatch condition detected");
+                    break;
+                }
+            }
+
+            if (rebatchNeeded) {
+                logger.info("Rebatching starting.");
+                final Queue<Integer> originalBatches = new ArrayDeque<Integer>(fileIds);
+                Integer newBatchId = originalBatches.peek();
+
+
+                final File originalPath = new File(path.getPath() + "/original");
+                originalPath.mkdirs();
+
+
+                for (File batchFile : batchFiles) {
+                    batchFile.renameTo(new File(originalPath, batchFile.getName()));
+                }
+
+                for (File file : originalPath.listFiles()) {
+                    final long batchRegroupStart = System.currentTimeMillis();
+
+                    if(file.getName().equals("lastBatchId")) continue;
+
+                    final Batch batch = getBatchFromFile(file);
+                    int regroupedCount=0;
+
+                    if (batch.getBatch().size() >= REBATCH_THRESHOLD_ITEM_COUNT
+                            || file.length() >= REBATCH_THRESHOLD_FILE_SIZE) {
+
+                        List<Action> rebatchedActions = new ArrayList<Action>(REBATCH_THRESHOLD_ITEM_COUNT);
+                        for (Action action : batch.getBatch()) {
+                            if (rebatchedActions.size() >= REBATCH_THRESHOLD_ITEM_COUNT) {
+                                persist(rebatchedActions);
+                                regroupedCount++;
+                                rebatchedActions = new ArrayList<Action>(REBATCH_THRESHOLD_ITEM_COUNT);
+                            }
+                            rebatchedActions.add(action);
+                        }
+
+                        if (rebatchedActions.size() > 0) {
+                            persist(rebatchedActions);
+                            regroupedCount++;
+                        }
+                    } else {
+                        persist(batch.getBatch());
+                        regroupedCount++;
+                    }
+
+                    final long batchRegroupEnd = System.currentTimeMillis();
+                    logger.info(String.format("Batch %d regrouped in to %d. Took %d ms.", batch.getBatchId(), regroupedCount, batchRegroupEnd - batchRegroupStart));
+                }
+                final long rebatchingEnd = System.currentTimeMillis();
+
+                logger.info(String.format("Rebatching finished. Rebatched %d to %d batches. Took %d ms", originalBatches.size(), lastBatchId - newBatchId, rebatchingEnd-rebatchingStart));
+
+                //Reload all data after rebatching
+                initPersistedFiles();
+            } else {
+                logger.debug("No rebatching needed. Starting");
+            }
+
+        }finally {
+            lock.writeLock().unlock();
+        }
     }
 
     private Batch getBatchFromFile(File batchFile) {

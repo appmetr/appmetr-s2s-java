@@ -2,6 +2,7 @@ package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Action;
 import com.appmetr.s2s.persister.BatchPersister;
+import com.appmetr.s2s.persister.FileBatchPersister;
 import com.appmetr.s2s.persister.MemoryBatchPersister;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,8 @@ public class AppMetr {
     private static final long FLUSH_PERIOD = MILLIS_PER_MINUTE / 2;
     private static final long UPLOAD_PERIOD = MILLIS_PER_MINUTE / 2;
 
-    private static final int MAX_EVENTS_SIZE = 1024 * 500 * 20;
+    private static final int MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
+    private static final int MAX_EVENTS_COUNT = FileBatchPersister.REBATCH_THRESHOLD_ITEM_COUNT;
 
     private BatchPersister batchPersister;
 
@@ -106,13 +108,14 @@ public class AppMetr {
     }
 
     protected boolean isNeedToFlush() {
-        return eventsSize.get() >= MAX_EVENTS_SIZE;
+        return eventsSize.get() >= MAX_EVENTS_SIZE
+                || actionList.size() >= MAX_EVENTS_COUNT;
     }
 
     protected void upload() {
         uploadLock.lock();
         try {
-            logger.debug("Upload starting");
+            logger.info("Upload starting");
 
             Batch batch;
             int uploadedBatchCounter = 0;
@@ -123,17 +126,29 @@ public class AppMetr {
 
                 boolean result;
                 try {
+                    final long batchReadStart = System.currentTimeMillis();
                     final byte[] batchBytes = SerializationUtils.serializeJsonGzip(batch, false);
+                    final long batchReadEnd = System.currentTimeMillis();
+
+                    logger.trace(String.format("Batch %s read time: %d ms", batch.getBatchId(), batchReadEnd - batchReadStart));
+
+                    final long batchUploadStart = System.currentTimeMillis();
                     result = HttpRequestService.sendRequest(url, token, batchBytes);
+                    final long batchUploadEnd = System.currentTimeMillis();
+
+
                     if (result) {
-                        logger.debug(String.format("Batch %s successfully uploaded", batch.getBatchId()));
+                        logger.trace(String.format("Batch %s successfully uploaded", batch.getBatchId()));
                         batchPersister.remove();
                         uploadedBatchCounter++;
                         sendBatchesBytes += batchBytes.length;
                     } else {
-                        logger.error(String.format("Error while upload batch %s", batch.getBatchId()));
-                        break;
+                        logger.error(String.format("Error while upload batch %s. Took %d ms", batch.getBatchId(), batchUploadEnd - batchUploadStart));
                     }
+                    logger.info(String.format("Batch %d %s finished. Took %d ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart));
+
+                    if (!result) break;
+
                 } catch (IOException e) {
                     logger.error("IOException while sending request", e);
                     break;

@@ -34,6 +34,7 @@ public class AppMetr {
 
     private static final int MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
     private static final int MAX_EVENTS_COUNT = FileBatchPersister.REBATCH_THRESHOLD_ITEM_COUNT;
+    private static final int BATCHES_TO_SEND = 5;
 
     private BatchPersister batchPersister;
 
@@ -121,7 +122,7 @@ public class AppMetr {
             int uploadedBatchCounter = 0;
             int allBatchCounter = 0;
             long sendBatchesBytes = 0;
-            while ((batch = batchPersister.getNext()) != null) {
+            while ((batch = batchPersister.getNext()) != null && allBatchCounter < BATCHES_TO_SEND ){
                 allBatchCounter++;
 
                 boolean result;

@@ -11,18 +11,21 @@ public class RebatcherConsole {
     private static final Logger log = LoggerFactory.getLogger(RebatcherConsole.class);
 
     public static void main(String[] args) throws IOException {
-        for (String arg : args) {
-            log.info("Searching for batches in: "+arg);
+        if(args.length == 0) System.out.println("Usage: <batch dir> <deploy-id> <appmetr-api-uri> (deploy and uri are optional)");
+
+        final String batchesPath = args[0];
+        final FileBatchPersister fileBatchPersister = new FileBatchPersister(batchesPath);
+
+
+        if(args.length > 1) {
+            final String deploy = args[1];
+            final String url = args.length >= 3 ? args[2] : "http://localhost:8081/api";
+
+            final AppMetr appMetr = new AppMetr(deploy, url, fileBatchPersister);
+            System.out.println("Starting batch uploading to "+url+" with deploy token "+deploy);
+            System.in.read();
+
+            appMetr.stop();
         }
-
-        final FileBatchPersister fileBatchPersister = new FileBatchPersister(args[0]);
-        //fileBatchPersister.rebatch();
-
-        //final AppMetr appMetr = new AppMetr("3aef1916-3964-45cb-a7e4-c53011de6c98", "http://localhost:8081/api", fileBatchPersister);
-        final AppMetr appMetr = new AppMetr("773f7b6b-64d4-439b-889b-49c49d4fe146", "http://localhost:8081/api", fileBatchPersister);
-
-        System.in.read();
-
-        appMetr.stop();
     }
 }

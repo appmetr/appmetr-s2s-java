@@ -126,7 +126,7 @@ public class FileBatchPersister implements BatchPersister {
             for (File batchFile : batchFiles) {
                 if (batchFile.length() > REBATCH_THRESHOLD_FILE_SIZE) {
                     rebatchNeeded = true;
-                    logger.info("Rebatch condition detected");
+                    logger.warn("Rebatch condition detected");
                     break;
                 }
             }

@@ -59,12 +59,13 @@ public class AppMetrTimer implements Runnable {
     }
 
     public void trigger() {
-        lock.lock();
-
-        try {
-            trigger.signal();
-        } finally {
-            lock.unlock();
+        // если не получилось взять лок значит поток работает прямо сейчас и нечего его трогать.
+        if (lock.tryLock()) {
+            try {
+                trigger.signal();
+            } finally {
+                lock.unlock();
+            }
         }
     }
 

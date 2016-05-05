@@ -22,7 +22,7 @@ public class AppMetr {
     private final String url;
     private boolean stopped = false;
 
-    private AtomicInteger eventsSize = new AtomicInteger(0);
+    private final AtomicInteger eventsSize = new AtomicInteger(0);
     private final ArrayList<Action> actionList = new ArrayList<Action>();
 
     protected AppMetrTimer eventFlushTimer;
@@ -75,7 +75,6 @@ public class AppMetr {
                 flushNeeded = isNeedToFlush();
             }
             if (flushNeeded) {
-                eventsSize.set(0);
                 eventFlushTimer.trigger();
             }
         } catch (Exception error) {
@@ -92,6 +91,7 @@ public class AppMetr {
             synchronized (actionList) {
                 copyAction = new ArrayList<Action>(actionList);
                 actionList.clear();
+                eventsSize.set(0);
             }
 
             if (copyAction.size() > 0) {

@@ -59,7 +59,7 @@ public class AppMetrTimer implements Runnable {
     }
 
     public void trigger() {
-        // если не получилось взять лок значит поток работает прямо сейчас и нечего его трогать.
+        // there is no need to acquare a lock here, if thread is working - it should pick up newly available job
         if (lock.tryLock()) {
             try {
                 trigger.signal();

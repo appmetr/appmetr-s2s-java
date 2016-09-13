@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
@@ -15,6 +16,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class HttpRequestService {
+    public static final int CONNECT_TIMEOUT = 60 * 1000;
+    public static final int READ_TIMEOUT = 120 * 1000;
+
     private static Logger logger = LoggerFactory.getLogger(HttpRequestService.class);
     private static JsonParser jsonParser = new JsonParser();
     private final static String serverMethodName = "server.trackS2S";
@@ -27,6 +31,8 @@ public class HttpRequestService {
 
         URL url = new URL(httpURL + "?" + makeQueryString(params));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setConnectTimeout(CONNECT_TIMEOUT);
+        connection.setReadTimeout(READ_TIMEOUT);
 
         try {
             // Add body data
@@ -64,7 +70,11 @@ public class HttpRequestService {
             } catch (JsonSyntaxException jsonError) {
                 logger.error("Json exception", jsonError);
             }
-        } catch (Exception error) {
+        }
+        catch (SocketTimeoutException timeoutException){
+            logger.error("Socket timeout", timeoutException);
+        }
+        catch (Exception error) {
             logger.error("Server error", error);
         } finally {
             connection.disconnect();

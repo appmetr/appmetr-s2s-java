@@ -21,7 +21,7 @@ public class MemoryBatchPersister implements BatchPersister {
     @Override public void persist(List<Action> actionList) {
         synchronized (batchQueue) {
             Batch batch = new Batch(batchId++, actionList);
-            batchQueue.push(batch);
+            batchQueue.add(batch);
         }
     }
 

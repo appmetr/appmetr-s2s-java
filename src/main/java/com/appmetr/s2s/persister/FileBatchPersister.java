@@ -187,14 +187,14 @@ public class FileBatchPersister implements BatchPersister {
     private Batch getBatchFromFile(Path batchFile) {
         try {
             if (Files.notExists(batchFile) || Files.size(batchFile) == 0) {
-                return null;
+                throw new IllegalStateException("File " + batchFile + " doesn't exists or empty");
             }
 
             byte[] serializedBatch = Files.readAllBytes(batchFile);
             return SerializationUtils.deserializeJsonGzip(serializedBatch);
         } catch (Exception e) {
             log.error("(getBatchFromFile) Exception while getting batch from file " + batchFile + ": ", e);
-            return null;
+            throw new RuntimeException(e);
         }
     }
 

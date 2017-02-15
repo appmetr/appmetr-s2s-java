@@ -8,14 +8,12 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class AppMetrTimer implements Runnable {
+public class AppMetrTimer extends Thread {
 
     protected static final Logger logger = LoggerFactory.getLogger(AppMetrTimer.class);
 
     private final Lock lock = new ReentrantLock();
     private final Condition trigger = lock.newCondition();
-
-    private volatile Thread pollingThread = null;
 
     private final long TIMER_PERIOD;
 
@@ -33,10 +31,9 @@ public class AppMetrTimer implements Runnable {
     }
 
     @Override public void run() {
-        pollingThread = Thread.currentThread();
         logger.info(jobName + " started!");
 
-        while (!pollingThread.isInterrupted()) {
+        while (true) {
             lock.lock();
 
             try {
@@ -46,8 +43,8 @@ public class AppMetrTimer implements Runnable {
                 onTimer.run();
             } catch (InterruptedException ie) {
                 logger.warn(String.format("Interrupted while polling the queue. Stop polling for %s", jobName));
-
-                pollingThread.interrupt();
+                Thread.currentThread().interrupt();
+                break;
             } catch (Exception e) {
                 logger.error(String.format("Error in %s", jobName), e);
             } finally {
@@ -66,14 +63,6 @@ public class AppMetrTimer implements Runnable {
             } finally {
                 lock.unlock();
             }
-        }
-    }
-
-    public void stop() {
-        logger.info(String.format("%s stop triggered!", jobName));
-
-        if (pollingThread != null) {
-            pollingThread.interrupt();
         }
     }
 }

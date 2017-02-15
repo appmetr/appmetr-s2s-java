@@ -2,6 +2,7 @@ package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Event;
 import com.appmetr.s2s.persister.FileBatchPersister;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ public class AppMetrTest {
     private static String url = "";
     private static String filePersisterPath = "";
 
+    @Test
     public void testPersister() {
         AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
         for (int i = 0; i < 10001; i++) {
@@ -26,7 +28,8 @@ public class AppMetrTest {
         appMetr.stop();
     }
 
-    private static void pushSomeEvents() {
+    @Test
+    public void pushSomeEvents() {
         AppMetr appMetr = new AppMetr(token, url);
         for (int i = 0; i < 500; i++) {
             HashMap<String, Object> properties = new HashMap<String, Object>();

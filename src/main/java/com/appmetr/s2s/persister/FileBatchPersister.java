@@ -140,8 +140,11 @@ public class FileBatchPersister implements BatchPersister {
                     }
 
                     final Batch batch = getBatchFromFile(file);
-                    int regroupedCount = 0;
+                    if (batch == null) {
+                        continue;
+                    }
 
+                    int regroupedCount = 0;
                     if (batch.getBatch().size() >= REBATCH_THRESHOLD_ITEM_COUNT
                             || Files.size(file) >= REBATCH_THRESHOLD_FILE_SIZE) {
 
@@ -187,14 +190,14 @@ public class FileBatchPersister implements BatchPersister {
     private Batch getBatchFromFile(Path batchFile) {
         try {
             if (Files.notExists(batchFile) || Files.size(batchFile) == 0) {
-                throw new IllegalStateException("File " + batchFile + " doesn't exists or empty");
+                return null;
             }
 
             byte[] serializedBatch = Files.readAllBytes(batchFile);
             return SerializationUtils.deserializeJsonGzip(serializedBatch);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("(getBatchFromFile) Exception while getting batch from file " + batchFile + ": ", e);
-            throw new RuntimeException(e);
+            return null;
         }
     }
 
@@ -209,13 +212,19 @@ public class FileBatchPersister implements BatchPersister {
     @Override public Batch getNext() {
         lock.readLock().lock();
         try {
-            Integer batchId = fileIds.peek();
+            Batch batch;
 
-            if (batchId == null) {
-                return null;
-            }
+            do {
+                Integer batchId = fileIds.peek();
 
-            return getBatchFromFile(getBatchFile(batchId));
+                if (batchId == null) {
+                    return null;
+                }
+
+                batch = getBatchFromFile(getBatchFile(batchId));
+            } while (batch == null);
+
+            return batch;
         } finally {
             lock.readLock().unlock();
         }

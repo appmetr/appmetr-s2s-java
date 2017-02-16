@@ -19,10 +19,10 @@ public class AppMetr {
 
     private final String token;
     private final String url;
-    private boolean stopped = false;
+    private volatile boolean stopped = false;
 
     private final AtomicInteger eventsSize = new AtomicInteger(0);
-    private final ArrayList<Action> actionList = new ArrayList<Action>();
+    private final ArrayList<Action> actionList = new ArrayList<>();
 
     protected AppMetrTimer eventFlushTimer;
     protected AppMetrTimer httpUploadTimer;
@@ -86,7 +86,7 @@ public class AppMetr {
 
         ArrayList<Action> copyAction;
         synchronized (actionList) {
-            copyAction = new ArrayList<Action>(actionList);
+            copyAction = new ArrayList<>(actionList);
             actionList.clear();
             eventsSize.set(0);
         }
@@ -152,17 +152,20 @@ public class AppMetr {
     public void stop() {
         stopped = true;
 
-        httpUploadTimer.interrupt();
-        eventFlushTimer.interrupt();
+        eventFlushTimer.trigger();
 
         try {
-            httpUploadTimer.join();
+            Thread.sleep(100);
+            eventFlushTimer.interrupt();
             eventFlushTimer.join();
+
+            Thread.sleep(100);
+            httpUploadTimer.interrupt();
+            httpUploadTimer.join();
+
         } catch (InterruptedException e) {
-            log.error("Interrupt at stop method", e);
+            log.error("Stop was interrupted", e);
             Thread.currentThread().interrupt();
         }
-
-        flush();
     }
 }

@@ -12,7 +12,7 @@ public class AppMetrTest {
 
     private static String token = "";
     private static String url = "";
-    private static String filePersisterPath = "";
+    private static String filePersisterPath = "target";
 
     @Test
     public void testPersister() {

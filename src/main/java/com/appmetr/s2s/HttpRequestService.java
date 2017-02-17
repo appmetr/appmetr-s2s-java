@@ -1,5 +1,6 @@
 package com.appmetr.s2s;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
@@ -84,13 +85,19 @@ public class HttpRequestService {
     }
 
     private static boolean isError(JsonObject response) {
-        try {
-            String errorMessage = response.get("error").getAsJsonObject().get("message").getAsString();
-            logger.error("Cant send batch: " + errorMessage);
-            return true;
-        } catch (NullPointerException e) {
+        final JsonElement error = response.get("error");
+        if (error == null) {
             return false;
         }
+
+        logger.error("Cant send batch: {}", error.getAsJsonObject().get("message").getAsString());
+
+        final JsonElement stackTrace = error.getAsJsonObject().get("stackTrace");
+        if (stackTrace != null) {
+            logger.error(stackTrace.getAsString());
+        }
+
+        return true;
     }
 
     private static String makeQueryString(Map<String, String> params) {

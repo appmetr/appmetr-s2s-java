@@ -66,14 +66,12 @@ public class AppMetr {
         }
 
         try {
-            boolean flushNeeded;
             synchronized (actionList) {
                 eventsSize.addAndGet(newAction.calcApproximateSize());
                 actionList.add(newAction);
-
-                flushNeeded = isNeedToFlush();
             }
-            if (flushNeeded) {
+
+            if (isNeedToFlush()) {
                 eventFlushTimer.trigger();
             }
         } catch (Exception error) {
@@ -152,9 +150,11 @@ public class AppMetr {
     public void stop() {
         stopped = true;
 
-        eventFlushTimer.trigger();
 
         try {
+            Thread.sleep(100);
+            eventFlushTimer.trigger();
+
             Thread.sleep(100);
             eventFlushTimer.interrupt();
             eventFlushTimer.join();

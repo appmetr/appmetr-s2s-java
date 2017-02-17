@@ -33,23 +33,25 @@ public class AppMetrTimer extends Thread {
     @Override public void run() {
         logger.info(jobName + " started!");
 
-        while (true) {
-            lock.lock();
+        lock.lock();
+        try {
+            while (true) {
+                try {
+                    trigger.await(TIMER_PERIOD, TimeUnit.MILLISECONDS);
 
-            try {
-                trigger.await(TIMER_PERIOD, TimeUnit.MILLISECONDS);
+                    logger.info(String.format("%s triggered", jobName));
 
-                logger.info(String.format("%s triggered", jobName));
-                onTimer.run();
-            } catch (InterruptedException ie) {
-                logger.warn(String.format("Interrupted while polling the queue. Stop polling for %s", jobName));
-                Thread.currentThread().interrupt();
-                break;
-            } catch (Exception e) {
-                logger.error(String.format("Error in %s", jobName), e);
-            } finally {
-                lock.unlock();
+                    onTimer.run();
+                } catch (InterruptedException ie) {
+                    logger.warn(String.format("Interrupted while waiting. Stop waiting for %s", jobName));
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    logger.error(String.format("Error in %s", jobName), e);
+                }
             }
+        } finally {
+            lock.unlock();
         }
 
         logger.info(String.format("%s stopped!", jobName));

@@ -214,7 +214,7 @@ public class FileBatchPersister implements BatchPersister {
         try {
             Batch batch;
 
-            do {
+            while (true) {
                 Integer batchId = fileIds.peek();
 
                 if (batchId == null) {
@@ -222,7 +222,12 @@ public class FileBatchPersister implements BatchPersister {
                 }
 
                 batch = getBatchFromFile(getBatchFile(batchId));
-            } while (batch == null);
+                if (batch != null) {
+                    break;
+                }
+
+                fileIds.remove();
+            }
 
             return batch;
         } finally {

@@ -62,8 +62,9 @@ public class HttpRequestService {
             try {
                 JsonObject responseJson = jsonParser.parse(result.toString()).getAsJsonObject();
                 String status = null;
-                if (!isError(responseJson))
+                if (!isError(responseJson)) {
                     status = responseJson.get("response").getAsJsonObject().get("status").getAsString();
+                }
 
                 if (status != null && status.compareTo("OK") == 0) {
                     return true;

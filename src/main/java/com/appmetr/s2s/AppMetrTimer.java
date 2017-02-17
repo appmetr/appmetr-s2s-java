@@ -15,17 +15,17 @@ public class AppMetrTimer extends Thread {
     private final Lock lock = new ReentrantLock();
     private final Condition trigger = lock.newCondition();
 
-    private final long TIMER_PERIOD;
-
+    private final long timerPeriod;
     private final Runnable onTimer;
     private final String jobName;
+    private volatile boolean stopped;
 
     public AppMetrTimer(long period, Runnable onTimer) {
         this(period, onTimer, "AppMetrTimer");
     }
 
     public AppMetrTimer(long period, Runnable onTimer, String jobName) {
-        TIMER_PERIOD = period;
+        timerPeriod = period;
         this.onTimer = onTimer;
         this.jobName = jobName;
     }
@@ -35,9 +35,9 @@ public class AppMetrTimer extends Thread {
 
         lock.lock();
         try {
-            while (true) {
+            while (!stopped) {
                 try {
-                    trigger.await(TIMER_PERIOD, TimeUnit.MILLISECONDS);
+                    trigger.await(timerPeriod, TimeUnit.MILLISECONDS);
 
                     logger.info(String.format("%s triggered", jobName));
 
@@ -66,5 +66,10 @@ public class AppMetrTimer extends Thread {
                 lock.unlock();
             }
         }
+    }
+
+    public void triggerAndStop() {
+        stopped = true;
+        trigger();
     }
 }

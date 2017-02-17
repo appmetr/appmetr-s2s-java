@@ -150,17 +150,13 @@ public class AppMetr {
     public void stop() {
         stopped = true;
 
-
         try {
             Thread.sleep(100);
-            eventFlushTimer.trigger();
 
-            Thread.sleep(100);
-            eventFlushTimer.interrupt();
+            eventFlushTimer.triggerAndStop();
             eventFlushTimer.join();
 
-            Thread.sleep(100);
-            httpUploadTimer.interrupt();
+            httpUploadTimer.triggerAndStop();
             httpUploadTimer.join();
 
         } catch (InterruptedException e) {

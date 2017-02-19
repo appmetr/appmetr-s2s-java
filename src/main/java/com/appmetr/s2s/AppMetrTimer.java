@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class AppMetrTimer extends Thread {
 
-    protected static final Logger logger = LoggerFactory.getLogger(AppMetrTimer.class);
+    protected static final Logger log = LoggerFactory.getLogger(AppMetrTimer.class);
 
     private final Lock lock = new ReentrantLock();
     private final Condition trigger = lock.newCondition();
@@ -31,7 +31,7 @@ public class AppMetrTimer extends Thread {
     }
 
     @Override public void run() {
-        logger.info(jobName + " started!");
+        log.info("{} started!", jobName);
 
         lock.lock();
         try {
@@ -39,22 +39,22 @@ public class AppMetrTimer extends Thread {
                 try {
                     trigger.await(timerPeriod, TimeUnit.MILLISECONDS);
 
-                    logger.info(String.format("%s triggered", jobName));
+                    log.info("{} triggered", jobName);
 
                     onTimer.run();
                 } catch (InterruptedException ie) {
-                    logger.warn(String.format("Interrupted while waiting. Stop waiting for %s", jobName));
+                    log.warn("Interrupted while waiting. Stop waiting for {}", jobName);
                     Thread.currentThread().interrupt();
                     break;
                 } catch (Exception e) {
-                    logger.error(String.format("Error in %s", jobName), e);
+                    log.error("Error in {}", jobName, e);
                 }
             }
         } finally {
             lock.unlock();
         }
 
-        logger.info(String.format("%s stopped!", jobName));
+        log.info("{} stopped!", jobName);
     }
 
     public void trigger() {

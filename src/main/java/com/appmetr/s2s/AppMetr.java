@@ -74,13 +74,13 @@ public class AppMetr {
             if (isNeedToFlush()) {
                 eventFlushTimer.trigger();
             }
-        } catch (Exception error) {
-            log.error("Track failed", error);
+        } catch (Exception e) {
+            log.error("Track failed", e);
         }
     }
 
     protected void flush() {
-        log.debug(String.format("Flushing started for %s actions", actionList.size()));
+        log.debug("Flushing started for {} actions", actionList.size());
 
         ArrayList<Action> copyAction;
         synchronized (actionList) {
@@ -119,7 +119,7 @@ public class AppMetr {
                 final byte[] batchBytes = SerializationUtils.serializeJsonGzip(batch, false);
                 final long batchReadEnd = System.currentTimeMillis();
 
-                log.trace(String.format("Batch %s read time: %d ms", batch.getBatchId(), batchReadEnd - batchReadStart));
+                log.trace("Batch {} read time: {} ms", batch.getBatchId(), batchReadEnd - batchReadStart);
 
                 final long batchUploadStart = System.currentTimeMillis();
                 result = HttpRequestService.sendRequest(url, token, batchBytes);
@@ -127,14 +127,14 @@ public class AppMetr {
 
 
                 if (result) {
-                    log.trace(String.format("Batch %s successfully uploaded", batch.getBatchId()));
+                    log.trace("Batch {} successfully uploaded", batch.getBatchId());
                     batchPersister.remove();
                     uploadedBatchCounter++;
                     sendBatchesBytes += batchBytes.length;
                 } else {
-                    log.error(String.format("Error while upload batch %s. Took %d ms", batch.getBatchId(), batchUploadEnd - batchUploadStart));
+                    log.error("Error while upload batch {}. Took {} ms", batch.getBatchId(), batchUploadEnd - batchUploadStart);
                 }
-                log.info(String.format("Batch %d %s finished. Took %d ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart));
+                log.info("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
 
                 if (!result) break;
 
@@ -144,7 +144,7 @@ public class AppMetr {
             }
         }
 
-        log.info(String.format("%s from %s batches uploaded. (%d bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes));
+        log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 
     public void stop() {

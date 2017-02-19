@@ -99,7 +99,7 @@ public class FileBatchPersister implements BatchPersister {
             lastBatchId = 0;
         }
 
-        log.info(String.format("Init lastBatchId with %s", lastBatchId));
+        log.info("Init lastBatchId with {}", lastBatchId);
 
         fileIds = new ArrayDeque<>(ids);
         log.info("Initialized {} batches.", ids.size());
@@ -168,11 +168,11 @@ public class FileBatchPersister implements BatchPersister {
                     }
 
                     final long batchRegroupEnd = System.currentTimeMillis();
-                    log.info(String.format("Batch %d regrouped in to %d. Took %d ms.", batch.getBatchId(), regroupedCount, batchRegroupEnd - batchRegroupStart));
+                    log.info("Batch {} regrouped in to {}. Took {} ms.", batch.getBatchId(), regroupedCount, batchRegroupEnd - batchRegroupStart);
                 }
                 final long rebatchingEnd = System.currentTimeMillis();
 
-                log.info(String.format("Rebatching finished. Rebatched %d to %d batches. Took %d ms", originalBatches.size(), lastBatchId - newBatchId, rebatchingEnd-rebatchingStart));
+                log.info("Rebatching finished. Rebatched {} to {} batches. Took {} ms", originalBatches.size(), lastBatchId - newBatchId, rebatchingEnd-rebatchingStart);
 
                 //Reload all data after rebatching
                 initPersistedFiles();

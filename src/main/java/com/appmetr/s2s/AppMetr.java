@@ -151,7 +151,7 @@ public class AppMetr {
         stopped = true;
 
         try {
-            Thread.sleep(100);
+            Thread.sleep(10);
 
             eventFlushTimer.triggerAndStop();
             eventFlushTimer.join();

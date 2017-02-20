@@ -145,6 +145,11 @@ public class AppMetr {
         log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 
+    /**
+     * Does flush and then upload all pending actions.
+     * Stops inner threads.
+     * May requires some time for competition even no pending actions exist.
+     */
     public void stop() {
         stopped = true;
 

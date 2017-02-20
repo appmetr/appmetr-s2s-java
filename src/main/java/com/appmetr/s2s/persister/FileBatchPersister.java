@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -58,9 +58,9 @@ public class FileBatchPersister implements BatchPersister {
         lastBatchId++;
 
         try {
-            Files.write(batchIdFileSaver, Collections.singleton(String.valueOf(lastBatchId)), Charset.forName("UTF-8"));
+            Files.write(batchIdFileSaver, Collections.singleton(String.valueOf(lastBatchId)), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            log.error("(updateLastBatchId) Exception while write to batchIdFileSaver file: ", e);
+            log.error("(updateLastBatchId) Exception while write to batchIdFileSaver file:", e);
         }
     }
 
@@ -88,7 +88,7 @@ public class FileBatchPersister implements BatchPersister {
 
         if (batchIdFileLength > 0) {
             try {
-                final List<String> lines = Files.readAllLines(batchIdFileSaver, Charset.forName("UTF-8"));
+                final List<String> lines = Files.readAllLines(batchIdFileSaver, StandardCharsets.UTF_8);
                 lastBatchId = Integer.parseInt(lines.get(0));
             } catch (IOException e) {
                 log.error("Exception while reading from batchIdFileSaver: ", e);
@@ -196,7 +196,7 @@ public class FileBatchPersister implements BatchPersister {
             byte[] serializedBatch = Files.readAllBytes(batchFile);
             return SerializationUtils.deserializeJsonGzip(serializedBatch);
         } catch (IOException e) {
-            log.error("(getBatchFromFile) Exception while getting batch from file " + batchFile + ": ", e);
+            log.error("(getBatchFromFile) Exception while getting batch from file {}:", batchFile, e);
             return null;
         }
     }
@@ -250,7 +250,7 @@ public class FileBatchPersister implements BatchPersister {
                 fileIds.add(lastBatchId);
                 updateLastBatchId();
             } catch (IOException e) {
-                log.error("(Persist) Exception while persist batch: ", e);
+                log.error("(Persist) Exception while persist batch:", e);
             }
         } finally {
             lock.writeLock().unlock();

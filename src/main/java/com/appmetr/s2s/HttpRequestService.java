@@ -90,10 +90,11 @@ public class HttpRequestService {
         if (error == null) {
             return false;
         }
+        final JsonObject errorObject = error.getAsJsonObject();
 
-        logger.error("Cant send batch: {}", error.getAsJsonObject().get("message").getAsString());
+        logger.error("Cant send batch: {}", errorObject.get("message").getAsString());
 
-        final JsonElement stackTrace = error.getAsJsonObject().get("stackTrace");
+        final JsonElement stackTrace = errorObject.get("stackTrace");
         if (stackTrace != null) {
             logger.error(stackTrace.getAsString());
         }

@@ -92,11 +92,10 @@ public class AppMetr {
         if (copyAction.size() > 0) {
             batchPersister.persist(copyAction);
             httpUploadTimer.trigger();
+            log.info("Flushing completed");
         } else {
             log.info("Nothing to flush");
         }
-
-        log.info("Flushing completed");
     }
 
     protected boolean isNeedToFlush() {
@@ -124,7 +123,6 @@ public class AppMetr {
                 final long batchUploadStart = System.currentTimeMillis();
                 result = HttpRequestService.sendRequest(url, token, batchBytes);
                 final long batchUploadEnd = System.currentTimeMillis();
-
 
                 if (result) {
                     log.trace("Batch {} successfully uploaded", batch.getBatchId());

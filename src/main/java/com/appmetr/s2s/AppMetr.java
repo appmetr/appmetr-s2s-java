@@ -41,6 +41,7 @@ public class AppMetr {
 
     private volatile Future<?> flushFuture;
     private volatile Future<?> uploadFuture;
+    private volatile boolean flushSubmitted;
 
     public AppMetr(String token, String url, BatchPersister persister) {
         this(token, url, persister, Executors.newSingleThreadScheduledExecutor(), true);
@@ -111,7 +112,13 @@ public class AppMetr {
     }
 
     protected Future<?> submitFlush() {
-        return submitMethod(flushLock, flushFuture, this::flush, getFlushPeriod(), future -> flushFuture = future);
+        if (flushSubmitted) {
+            return flushFuture;
+        }
+
+        flushSubmitted = true;
+        return submitMethod(flushLock, flushFuture, this::flush, getFlushPeriod(),
+                future -> {flushFuture = future; flushSubmitted = false;});
     }
 
     protected Future<?> submitUpload() {
@@ -177,22 +184,20 @@ public class AppMetr {
     }
 
     protected Runnable runIfNotLocked(final Lock lock, final Runnable runnable, long delay, Consumer<Future<?>> futureConsumer) {
-        final Runnable[] runnableHolder = new Runnable[1];
-
-        runnableHolder[0] = () -> {
-            if (lock.tryLock()) {
-                try {
-                    runnable.run();
-                } catch (Exception e) {
-                    log.error("Exception during execution", e);
-                }  finally {
-                    futureConsumer.accept(executorService.schedule(runnableHolder[0], delay, TimeUnit.MILLISECONDS));
-                    lock.unlock();
+        return new Runnable() {
+            @Override public void run() {
+                if (lock.tryLock()) {
+                    try {
+                        runnable.run();
+                    } catch (Exception e) {
+                        log.error("Exception during execution", e);
+                    } finally {
+                        futureConsumer.accept(executorService.schedule(this, delay, TimeUnit.MILLISECONDS));
+                        lock.unlock();
+                    }
                 }
             }
         };
-
-        return runnableHolder[0];
     }
 
     protected long getFlushPeriod() {

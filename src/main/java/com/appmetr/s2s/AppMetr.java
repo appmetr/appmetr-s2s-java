@@ -71,19 +71,17 @@ public class AppMetr {
             throw new RuntimeException("Trying to track after stop!");
         }
 
-        final boolean needFlush;
         listLock.lock();
         try {
             eventsSize += newAction.calcApproximateSize();
             actionList.add(newAction);
-            needFlush = isNeedToFlush();
+
+            if (isNeedToFlush()) {
+                submitFlush();
+            }
         }
         finally {
             listLock.unlock();
-        }
-
-        if (needFlush) {
-            submitFlush();
         }
     }
 

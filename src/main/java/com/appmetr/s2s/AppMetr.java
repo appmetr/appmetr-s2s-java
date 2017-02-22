@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -29,8 +30,10 @@ public class AppMetr {
     private final String token;
     private final String url;
     private final BatchPersister batchPersister;
-    private final ScheduledExecutorService executorService;
-    private final boolean needShutdown;
+    private final ScheduledExecutorService flushExecutor;
+    private final ScheduledExecutorService uploadExecutor;
+    private final boolean needFlushShutdown;
+    private final boolean needUploadShutdown;
     private volatile boolean stopped = false;
 
     private int eventsSize;
@@ -41,25 +44,32 @@ public class AppMetr {
 
     private volatile Future<?> flushFuture;
     private volatile Future<?> uploadFuture;
-    private volatile boolean flushSubmitted;
+    private final AtomicBoolean flushSubmitted = new AtomicBoolean();
 
     public AppMetr(String token, String url, BatchPersister persister) {
-        this(token, url, persister, Executors.newSingleThreadScheduledExecutor(), true);
+        this(token, url, persister,
+                Executors.newSingleThreadScheduledExecutor(), true,
+                Executors.newSingleThreadScheduledExecutor(), true);
     }
 
     public AppMetr(String token, String url, BatchPersister persister,
-                   ScheduledExecutorService executorService, boolean needShutdown) {
+                   ScheduledExecutorService flushExecutor, boolean needFlushShutdown,
+                   ScheduledExecutorService uploadExecutor, boolean needUploadShutdown) {
         this.url = url;
         this.token = token;
         this.batchPersister = persister;
-        this.executorService = executorService;
-        this.needShutdown = needShutdown;
+        this.flushExecutor = flushExecutor;
+        this.needFlushShutdown = needFlushShutdown;
+        if (uploadExecutor != null) {
+            this.uploadExecutor = uploadExecutor;
+            this.needUploadShutdown = needUploadShutdown;
+        } else {
+            this.uploadExecutor = flushExecutor;
+            this.needUploadShutdown = false;
+        }
 
-        flushFuture = executorService.schedule(runIfNotLocked(flushLock, this::flush, getFlushPeriod(),
-                future -> flushFuture = future), getFlushPeriod(), TimeUnit.MILLISECONDS);
-
-        uploadFuture = executorService.schedule(runIfNotLocked(uploadLock, this::upload, getUploadPeriod(),
-                future -> uploadFuture = future), getFlushPeriod()/2 + getUploadPeriod(), TimeUnit.MILLISECONDS);
+        scheduleFlush();
+        scheduleUpload();
     }
 
     public AppMetr(String token, String url) {
@@ -71,17 +81,20 @@ public class AppMetr {
             throw new RuntimeException("Trying to track after stop!");
         }
 
+        final boolean needFlush;
+
         listLock.lock();
         try {
             eventsSize += newAction.calcApproximateSize();
             actionList.add(newAction);
-
-            if (isNeedToFlush()) {
-                submitFlush();
-            }
+            needFlush = isNeedToFlush();
         }
         finally {
             listLock.unlock();
+        }
+
+        if (needFlush) {
+            submitFlush();
         }
     }
 
@@ -109,26 +122,38 @@ public class AppMetr {
         submitUpload();
     }
 
-    protected Future<?> submitFlush() {
-        if (flushSubmitted) {
-            return flushFuture;
-        }
+    protected void scheduleFlush() {
+        flushFuture = flushExecutor.schedule(runIfNotLocked(flushLock, this::flush , flushExecutor, getFlushPeriod(),
+                future -> flushFuture = future), getFlushPeriod(), TimeUnit.MILLISECONDS);
+    }
 
-        flushSubmitted = true;
-        return submitMethod(flushLock, flushFuture, this::flush, getFlushPeriod(),
-                future -> {flushFuture = future; flushSubmitted = false;});
+    protected void scheduleUpload() {
+        uploadFuture = uploadExecutor.schedule(runIfNotLocked(uploadLock, this::upload, uploadExecutor, getUploadPeriod(),
+                future -> uploadFuture = future), getFlushPeriod()/2 + getUploadPeriod(), TimeUnit.MILLISECONDS);
+    }
+
+    protected Future<?> submitFlush() {
+        do {
+            if (flushSubmitted.get()) {
+                return flushFuture;
+            }
+        } while (!flushSubmitted.compareAndSet(false, true));
+
+        return submitMethod(flushLock, flushFuture, this::flush, flushExecutor, getFlushPeriod(),
+                future -> {flushFuture = future; flushSubmitted.set(false);});
     }
 
     protected Future<?> submitUpload() {
-        return submitMethod(uploadLock, uploadFuture, this::upload, getUploadPeriod(), future -> uploadFuture = future);
+        return submitMethod(uploadLock, uploadFuture, this::upload, uploadExecutor, getUploadPeriod(), future -> uploadFuture = future);
     }
 
-    protected Future<?> submitMethod(Lock lock, Future<?> future, Runnable runnable, long delay, Consumer<Future<?>> futureConsumer) {
+    protected Future<?> submitMethod(Lock lock, Future<?> future, Runnable runnable,
+                                     ScheduledExecutorService executor, long delay, Consumer<Future<?>> futureConsumer) {
         if (future != null) {
             future.cancel(false);
         }
 
-        final Future<?> newFuture = executorService.submit(runIfNotLocked(lock, runnable, delay, futureConsumer));
+        final Future<?> newFuture = executor.submit(runIfNotLocked(lock, runnable, executor, delay, futureConsumer));
         futureConsumer.accept(newFuture);
         return newFuture;
     }
@@ -181,7 +206,8 @@ public class AppMetr {
         log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 
-    protected Runnable runIfNotLocked(final Lock lock, final Runnable runnable, long delay, Consumer<Future<?>> futureConsumer) {
+    protected Runnable runIfNotLocked(final Lock lock, final Runnable runnable,
+                                      ScheduledExecutorService executor, long delay, Consumer<Future<?>> futureConsumer) {
         return new Runnable() {
             @Override public void run() {
                 if (lock.tryLock()) {
@@ -190,7 +216,7 @@ public class AppMetr {
                     } catch (Exception e) {
                         log.error("Exception during execution", e);
                     } finally {
-                        futureConsumer.accept(executorService.schedule(this, delay, TimeUnit.MILLISECONDS));
+                        futureConsumer.accept(executor.schedule(this, delay, TimeUnit.MILLISECONDS));
                         lock.unlock();
                     }
                 }
@@ -221,8 +247,11 @@ public class AppMetr {
             uploadFuture.get();
             uploadFuture.cancel(false);
 
-            if (needShutdown) {
-                executorService.shutdownNow();
+            if (needFlushShutdown) {
+                flushExecutor.shutdownNow();
+            }
+            if (needUploadShutdown) {
+                uploadExecutor.shutdownNow();
             }
 
         } catch (InterruptedException e) {

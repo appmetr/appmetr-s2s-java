@@ -184,9 +184,11 @@ public class AppMetr {
                 result = HttpRequestService.sendRequest(url, token, batchBytes);
             } catch (IOException e) {
                 log.error("IOException while sending request", e);
-                break;
+                result = false;
             }
             final long batchUploadEnd = System.currentTimeMillis();
+
+            log.info("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
 
             if (result) {
                 log.trace("Batch {} successfully uploaded", batch.getBatchId());
@@ -195,10 +197,6 @@ public class AppMetr {
                 sendBatchesBytes += batchBytes.length;
             } else {
                 log.error("Error while upload batch {}. Took {} ms", batch.getBatchId(), batchUploadEnd - batchUploadStart);
-            }
-            log.info("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
-
-            if (!result) {
                 break;
             }
         }

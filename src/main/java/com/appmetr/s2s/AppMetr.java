@@ -10,11 +10,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 
 public class AppMetr {
     private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
@@ -22,7 +21,7 @@ public class AppMetr {
     private static final int MILLIS_PER_MINUTE = 1000 * 60;
     private static final long FLUSH_PERIOD = MILLIS_PER_MINUTE / 2;
     private static final long UPLOAD_PERIOD = MILLIS_PER_MINUTE / 2;
-    private static final int MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
+    private static final long MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
     private static final int MAX_EVENTS_COUNT = FileBatchPersister.REBATCH_THRESHOLD_ITEM_COUNT;
 
     public static final String SERVER_ID = UUID.randomUUID().toString();
@@ -36,15 +35,12 @@ public class AppMetr {
     private final boolean needUploadShutdown;
     private volatile boolean stopped = false;
 
-    private int eventsSize;
+    private long eventsSize;
     private ArrayList<Action> actionList = new ArrayList<>();
-    private final Lock flushLock = new ReentrantLock();
-    private final Lock uploadLock = new ReentrantLock();
     private final Lock listLock = new ReentrantLock();
 
-    private volatile Future<?> flushFuture;
-    private volatile Future<?> uploadFuture;
-    private final AtomicBoolean flushSubmitted = new AtomicBoolean();
+    private final ScheduledAndForced flushSchedule;
+    private final ScheduledAndForced uploadSchedule;
 
     public AppMetr(String token, String url, BatchPersister persister) {
         this(token, url, persister,
@@ -68,8 +64,8 @@ public class AppMetr {
             this.needUploadShutdown = false;
         }
 
-        scheduleFlush();
-        scheduleUpload();
+        flushSchedule = new ScheduledAndForced(flushExecutor, this::flush, getFlushPeriod());
+        uploadSchedule = new ScheduledAndForced(uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
     }
 
     public AppMetr(String token, String url) {
@@ -94,7 +90,7 @@ public class AppMetr {
         }
 
         if (needFlush) {
-            submitFlush();
+            flushSchedule.force();
         }
     }
 
@@ -119,43 +115,7 @@ public class AppMetr {
         batchPersister.persist(actionsToPersist);
         log.info("Flushing completed");
 
-        submitUpload();
-    }
-
-    protected void scheduleFlush() {
-        flushFuture = flushExecutor.schedule(runIfNotLocked(flushLock, this::flush , flushExecutor, getFlushPeriod(),
-                future -> flushFuture = future), getFlushPeriod(), TimeUnit.MILLISECONDS);
-    }
-
-    protected void scheduleUpload() {
-        uploadFuture = uploadExecutor.schedule(runIfNotLocked(uploadLock, this::upload, uploadExecutor, getUploadPeriod(),
-                future -> uploadFuture = future), getFlushPeriod()/2 + getUploadPeriod(), TimeUnit.MILLISECONDS);
-    }
-
-    protected Future<?> submitFlush() {
-        do {
-            if (flushSubmitted.get()) {
-                return flushFuture;
-            }
-        } while (!flushSubmitted.compareAndSet(false, true));
-
-        return submitMethod(flushLock, flushFuture, this::flush, flushExecutor, getFlushPeriod(),
-                future -> {flushFuture = future; flushSubmitted.set(false);});
-    }
-
-    protected Future<?> submitUpload() {
-        return submitMethod(uploadLock, uploadFuture, this::upload, uploadExecutor, getUploadPeriod(), future -> uploadFuture = future);
-    }
-
-    protected Future<?> submitMethod(Lock lock, Future<?> future, Runnable runnable,
-                                     ScheduledExecutorService executor, long delay, Consumer<Future<?>> futureConsumer) {
-        if (future != null) {
-            future.cancel(false);
-        }
-
-        final Future<?> newFuture = executor.submit(runIfNotLocked(lock, runnable, executor, delay, futureConsumer));
-        futureConsumer.accept(newFuture);
-        return newFuture;
+        uploadSchedule.force();
     }
 
     protected boolean isNeedToFlush() {
@@ -204,24 +164,6 @@ public class AppMetr {
         log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 
-    protected Runnable runIfNotLocked(final Lock lock, final Runnable runnable,
-                                      ScheduledExecutorService executor, long delay, Consumer<Future<?>> futureConsumer) {
-        return new Runnable() {
-            @Override public void run() {
-                if (lock.tryLock()) {
-                    try {
-                        runnable.run();
-                    } catch (Exception e) {
-                        log.error("Exception during execution", e);
-                    } finally {
-                        futureConsumer.accept(executor.schedule(this, delay, TimeUnit.MILLISECONDS));
-                        lock.unlock();
-                    }
-                }
-            }
-        };
-    }
-
     protected long getFlushPeriod() {
         return FLUSH_PERIOD;
     }
@@ -239,11 +181,10 @@ public class AppMetr {
         stopped = true;
 
         try {
-            submitFlush().get();
-            flushFuture.cancel(false);
+            flushSchedule.stop();
+            flush();
 
-            uploadFuture.get();
-            uploadFuture.cancel(false);
+            uploadSchedule.stop();
 
             if (needFlushShutdown) {
                 flushExecutor.shutdownNow();
@@ -251,12 +192,9 @@ public class AppMetr {
             if (needUploadShutdown) {
                 uploadExecutor.shutdownNow();
             }
-
         } catch (InterruptedException e) {
             log.error("Stop was interrupted", e);
             Thread.currentThread().interrupt();
-        } catch (ExecutionException e) {
-            log.error("Exception while execution", e);
         }
     }
 }

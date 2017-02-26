@@ -13,7 +13,7 @@ public class Batch {
     public Batch(String serverId, int batchId, List<Action> actionList) {
         this.serverId = serverId;
         this.batchId = batchId;
-        batch = new ArrayList<Action>(actionList);
+        batch = new ArrayList<>(actionList);
     }
 
     public String getServerId() {

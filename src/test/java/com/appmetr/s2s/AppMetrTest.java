@@ -15,7 +15,7 @@ public class AppMetrTest {
     private static String filePersisterPath = "target";
 
     @Test
-    public void testPersister() {
+    public void testFilePersister() {
         AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
         for (int i = 0; i < 10001; i++) {
             HashMap<String, Object> properties = new HashMap<String, Object>();
@@ -29,7 +29,7 @@ public class AppMetrTest {
     }
 
     @Test
-    public void pushSomeEvents() {
+    public void testMemoryPersister() {
         AppMetr appMetr = new AppMetr(token, url);
         for (int i = 0; i < 500; i++) {
             HashMap<String, Object> properties = new HashMap<String, Object>();
@@ -39,6 +39,7 @@ public class AppMetrTest {
             }
             appMetr.track(new Event("event#" + i).setProperties(properties));
         }
+        appMetr.stop();
     }
 
     private static Object getRandomObject() {

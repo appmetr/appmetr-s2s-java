@@ -15,11 +15,12 @@ import java.util.function.BooleanSupplier;
 public class ScheduledAndForced {
     private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
 
+    private static final long RESCHEDULE_DELTA = 5; //millis
+
     private final ScheduledExecutorService executor;
     private final Runnable runnable;
     private final BooleanSupplier predicate;
     private final long period;
-    private final long rescheduleDelta;
 
     private final Lock taskLock = new ReentrantLock();
     private final Lock futureLock = new ReentrantLock();
@@ -34,7 +35,6 @@ public class ScheduledAndForced {
         this.runnable = runnable;
         this.predicate = predicate;
         this.period = period;
-        this.rescheduleDelta = period / 5;
 
         scheduledFuture = executor.schedule(scheduleWrapped(), initialDelay, TimeUnit.MILLISECONDS);
     }
@@ -91,7 +91,7 @@ public class ScheduledAndForced {
                     try {
                         final long startTime = System.currentTimeMillis();
                         final long timePassed = startTime - finishedTime;
-                        if (timePassed < period - rescheduleDelta) {
+                        if (timePassed < period - getRescheduleDelta()) {
                             scheduledFuture = executor.schedule(this, period - timePassed, TimeUnit.MILLISECONDS);
                             return;
                         }
@@ -147,5 +147,9 @@ public class ScheduledAndForced {
         if (stopped) {
             throw new IllegalStateException("Already stopped");
         }
+    }
+
+    protected long getRescheduleDelta() {
+        return RESCHEDULE_DELTA;
     }
 }

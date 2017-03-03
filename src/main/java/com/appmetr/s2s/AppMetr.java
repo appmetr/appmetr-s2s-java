@@ -9,56 +9,67 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class AppMetr {
-    protected static final Logger logger = LoggerFactory.getLogger(AppMetr.class);
-
-    protected final ReentrantLock flushLock = new ReentrantLock();
-    protected final ReentrantLock uploadLock = new ReentrantLock();
-
-    private final String token;
-    private final String url;
-    private boolean stopped = false;
-
-    private final AtomicInteger eventsSize = new AtomicInteger(0);
-    private final ArrayList<Action> actionList = new ArrayList<Action>();
-
-    protected AppMetrTimer eventFlushTimer;
-    protected AppMetrTimer httpUploadTimer;
+    private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
 
     private static final int MILLIS_PER_MINUTE = 1000 * 60;
     private static final long FLUSH_PERIOD = MILLIS_PER_MINUTE / 2;
     private static final long UPLOAD_PERIOD = MILLIS_PER_MINUTE / 2;
-
-    private static final int MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
+    private static final long MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
     private static final int MAX_EVENTS_COUNT = FileBatchPersister.REBATCH_THRESHOLD_ITEM_COUNT;
 
-    private BatchPersister batchPersister;
+    public static final String SERVER_ID = UUID.randomUUID().toString();
+
+    private final String token;
+    private final String url;
+    private final BatchPersister batchPersister;
+    private final ScheduledExecutorService flushExecutor;
+    private final ScheduledExecutorService uploadExecutor;
+    private final boolean needFlushShutdown;
+    private final boolean needUploadShutdown;
+    private volatile boolean stopped = false;
+
+    private long eventsSize;
+    private ArrayList<Action> actionList = new ArrayList<>();
+    private final Lock listLock = new ReentrantLock();
+
+    private final ScheduledAndForced flushSchedule;
+    private final ScheduledAndForced uploadSchedule;
 
     public AppMetr(String token, String url, BatchPersister persister) {
+        this(token, url, persister,
+                Executors.newSingleThreadScheduledExecutor(), true,
+                Executors.newSingleThreadScheduledExecutor(), true);
+    }
+
+    public AppMetr(String token, String url, BatchPersister persister,
+                   ScheduledExecutorService flushExecutor, boolean needFlushShutdown,
+                   ScheduledExecutorService uploadExecutor, boolean needUploadShutdown) {
         this.url = url;
         this.token = token;
-        this.batchPersister = persister == null ? new MemoryBatchPersister() : persister;
+        this.batchPersister = persister;
+        this.flushExecutor = flushExecutor;
+        this.needFlushShutdown = needFlushShutdown;
+        if (uploadExecutor != null) {
+            this.uploadExecutor = uploadExecutor;
+            this.needUploadShutdown = needUploadShutdown;
+        } else {
+            this.uploadExecutor = flushExecutor;
+            this.needUploadShutdown = false;
+        }
 
-        eventFlushTimer = new AppMetrTimer(FLUSH_PERIOD, new Runnable() {
-            @Override public void run() {
-                flush();
-            }
-        }, "FlushTask");
-        new Thread(eventFlushTimer).start();
-
-        httpUploadTimer = new AppMetrTimer(UPLOAD_PERIOD, new Runnable() {
-            @Override public void run() {
-                upload();
-            }
-        }, "UploadTask");
-        new Thread(httpUploadTimer).start();
+        flushSchedule = new ScheduledAndForced(flushExecutor, this::flush, getFlushPeriod());
+        uploadSchedule = new ScheduledAndForced(uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
     }
 
     public AppMetr(String token, String url) {
-        this(token, url, null);
+        this(token, url, new MemoryBatchPersister());
     }
 
     public void track(Action newAction) {
@@ -66,118 +77,124 @@ public class AppMetr {
             throw new RuntimeException("Trying to track after stop!");
         }
 
-        try {
-            boolean flushNeeded;
-            synchronized (actionList) {
-                eventsSize.addAndGet(newAction.calcApproximateSize());
-                actionList.add(newAction);
+        final boolean needFlush;
 
-                flushNeeded = isNeedToFlush();
-            }
-            if (flushNeeded) {
-                eventFlushTimer.trigger();
-            }
-        } catch (Exception error) {
-            logger.error("Track failed", error);
+        listLock.lock();
+        try {
+            eventsSize += newAction.calcApproximateSize();
+            actionList.add(newAction);
+            needFlush = isNeedToFlush();
+        }
+        finally {
+            listLock.unlock();
+        }
+
+        if (needFlush) {
+            flushSchedule.force();
         }
     }
 
     protected void flush() {
-        flushLock.lock();
+        log.debug("Flushing started for {} actions", actionList.size());
+
+        final ArrayList<Action> actionsToPersist;
+        listLock.lock();
         try {
-            logger.debug(String.format("Flushing started for %s actions", actionList.size()));
-
-            ArrayList<Action> copyAction;
-            synchronized (actionList) {
-                copyAction = new ArrayList<Action>(actionList);
-                actionList.clear();
-                eventsSize.set(0);
+            if (actionList.isEmpty()) {
+                log.info("Nothing to flush");
+                return;
             }
 
-            if (copyAction.size() > 0) {
-                batchPersister.persist(copyAction);
-                httpUploadTimer.trigger();
-            } else {
-                logger.info("Nothing to flush");
-            }
-
-            logger.info("Flushing completed");
+            actionsToPersist = actionList;
+            actionList = new ArrayList<>();
+            eventsSize = 0;
         } finally {
-            flushLock.unlock();
+            listLock.unlock();
         }
+
+        batchPersister.persist(actionsToPersist);
+        log.info("Flushing completed");
+
+        uploadSchedule.force();
     }
 
     protected boolean isNeedToFlush() {
-        return eventsSize.get() >= MAX_EVENTS_SIZE
-                || actionList.size() >= MAX_EVENTS_COUNT;
+        return eventsSize >= MAX_EVENTS_SIZE || actionList.size() >= MAX_EVENTS_COUNT;
     }
 
     protected void upload() {
-        uploadLock.lock();
-        try {
-            logger.info("Upload starting");
+        log.info("Upload starting");
 
-            Batch batch;
-            int uploadedBatchCounter = 0;
-            int allBatchCounter = 0;
-            long sendBatchesBytes = 0;
-            while ((batch = batchPersister.getNext()) != null) {
-                allBatchCounter++;
+        Batch batch;
+        int uploadedBatchCounter = 0;
+        int allBatchCounter = 0;
+        long sendBatchesBytes = 0;
+        while ((batch = batchPersister.getNext()) != null) {
+            allBatchCounter++;
 
-                boolean result;
-                try {
-                    final long batchReadStart = System.currentTimeMillis();
-                    final byte[] batchBytes = SerializationUtils.serializeJsonGzip(batch, false);
-                    final long batchReadEnd = System.currentTimeMillis();
+            boolean result;
+            final long batchReadStart = System.currentTimeMillis();
+            final byte[] batchBytes = SerializationUtils.serializeJsonGzip(batch, false);
+            final long batchReadEnd = System.currentTimeMillis();
 
-                    logger.trace(String.format("Batch %s read time: %d ms", batch.getBatchId(), batchReadEnd - batchReadStart));
+            log.trace("Batch {} read time: {} ms", batch.getBatchId(), batchReadEnd - batchReadStart);
 
-                    final long batchUploadStart = System.currentTimeMillis();
-                    result = HttpRequestService.sendRequest(url, token, batchBytes);
-                    final long batchUploadEnd = System.currentTimeMillis();
-
-
-                    if (result) {
-                        logger.trace(String.format("Batch %s successfully uploaded", batch.getBatchId()));
-                        batchPersister.remove();
-                        uploadedBatchCounter++;
-                        sendBatchesBytes += batchBytes.length;
-                    } else {
-                        logger.error(String.format("Error while upload batch %s. Took %d ms", batch.getBatchId(), batchUploadEnd - batchUploadStart));
-                    }
-                    logger.info(String.format("Batch %d %s finished. Took %d ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart));
-
-                    if (!result) break;
-
-                } catch (IOException e) {
-                    logger.error("IOException while sending request", e);
-                    break;
-                }
+            final long batchUploadStart = System.currentTimeMillis();
+            try {
+                result = HttpRequestService.sendRequest(url, token, batchBytes);
+            } catch (IOException e) {
+                log.error("IOException while sending request", e);
+                result = false;
             }
+            final long batchUploadEnd = System.currentTimeMillis();
 
-            logger.info(String.format("%s from %s batches uploaded. (%d bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes));
-        } finally {
-            uploadLock.unlock();
+            log.info("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
+
+            if (result) {
+                log.trace("Batch {} successfully uploaded", batch.getBatchId());
+                batchPersister.remove();
+                uploadedBatchCounter++;
+                sendBatchesBytes += batchBytes.length;
+            } else {
+                log.error("Error while upload batch {}. Took {} ms", batch.getBatchId(), batchUploadEnd - batchUploadStart);
+                break;
+            }
         }
+
+        log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 
+    protected long getFlushPeriod() {
+        return FLUSH_PERIOD;
+    }
+
+    protected long getUploadPeriod() {
+        return UPLOAD_PERIOD;
+    }
+
+    /**
+     * Does flush and then upload all pending actions.
+     * Stops inner threads.
+     * May requires some time for competition even no pending actions exist.
+     */
     public void stop() {
         stopped = true;
 
-        uploadLock.lock();
         try {
-            httpUploadTimer.stop();
-        } finally {
-            uploadLock.unlock();
-        }
+            flushSchedule.stop();
+            flush();
 
-        flushLock.lock();
-        try {
-            eventFlushTimer.stop();
-        } finally {
-            flushLock.unlock();
-        }
+            uploadSchedule.stop();
 
-        flush();
+            if (needFlushShutdown) {
+                flushExecutor.shutdownNow();
+            }
+            if (needUploadShutdown) {
+                uploadExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            log.error("Stop was interrupted", e);
+            Thread.currentThread().interrupt();
+        }
     }
 }

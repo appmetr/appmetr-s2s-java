@@ -6,13 +6,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Batch {
+    private String serverId;
     private int batchId;
-
     private ArrayList<Action> batch;
 
-    public Batch(int batchId, List<Action> actionList) {
+    public Batch(String serverId, int batchId, List<Action> actionList) {
+        this.serverId = serverId;
         this.batchId = batchId;
-        batch = new ArrayList<Action>(actionList);
+        batch = new ArrayList<>(actionList);
+    }
+
+    public String getServerId() {
+        return serverId;
     }
 
     public int getBatchId() {
@@ -26,6 +31,7 @@ public class Batch {
     @Override public String toString() {
         return "Batch{" +
                 "#events=" + batch.size() +
+                ", serverId=" + serverId +
                 ", batchId=" + batchId +
                 '}';
     }

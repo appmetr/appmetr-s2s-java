@@ -1,5 +1,6 @@
 package com.appmetr.s2s;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
@@ -61,8 +62,9 @@ public class HttpRequestService {
             try {
                 JsonObject responseJson = jsonParser.parse(result.toString()).getAsJsonObject();
                 String status = null;
-                if (!isError(responseJson))
+                if (!isError(responseJson)) {
                     status = responseJson.get("response").getAsJsonObject().get("status").getAsString();
+                }
 
                 if (status != null && status.compareTo("OK") == 0) {
                     return true;
@@ -84,13 +86,20 @@ public class HttpRequestService {
     }
 
     private static boolean isError(JsonObject response) {
-        try {
-            String errorMessage = response.get("error").getAsJsonObject().get("message").getAsString();
-            logger.error("Cant send batch: " + errorMessage);
-            return true;
-        } catch (NullPointerException e) {
+        final JsonElement error = response.get("error");
+        if (error == null) {
             return false;
         }
+        final JsonObject errorObject = error.getAsJsonObject();
+
+        logger.error("Cant send batch: {}", errorObject.get("message").getAsString());
+
+        final JsonElement stackTrace = errorObject.get("stackTrace");
+        if (stackTrace != null) {
+            logger.error(stackTrace.getAsString());
+        }
+
+        return true;
     }
 
     private static String makeQueryString(Map<String, String> params) {

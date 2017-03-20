@@ -126,6 +126,9 @@ public class ScheduledAndForced {
                         runnable.run();
                     } catch (Exception e) {
                         log.error("Exception during execution", e);
+                    } catch (Error error) {
+                        log.error("Error during execution", error);
+                        throw error;
                     } finally {
                         finishedTime = System.currentTimeMillis();
                         taskLock.unlock();

@@ -65,8 +65,8 @@ public class AppMetr {
             this.needUploadShutdown = false;
         }
 
-        flushSchedule = new ScheduledAndForced(flushExecutor, this::flush, getFlushPeriod());
-        uploadSchedule = new ScheduledAndForced(uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
+        flushSchedule = new ScheduledAndForced(this.flushExecutor, this::flush, getFlushPeriod());
+        uploadSchedule = new ScheduledAndForced(this.uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
     }
 
     public AppMetr(String token, String url) {

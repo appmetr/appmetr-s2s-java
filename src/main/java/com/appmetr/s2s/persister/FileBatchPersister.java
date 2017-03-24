@@ -1,6 +1,5 @@
 package com.appmetr.s2s.persister;
 
-import com.appmetr.s2s.AppMetr;
 import com.appmetr.s2s.Batch;
 import com.appmetr.s2s.SerializationUtils;
 import com.appmetr.s2s.events.Action;
@@ -33,6 +32,7 @@ public class FileBatchPersister implements BatchPersister {
     private final String BATCH_FILE_NAME = "batchFile#";
     private final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE_NAME + "*";
     private final String DIGITAL_FORMAT = "%011d";
+    private String serverId;
 
     public FileBatchPersister(String filePath) {
         path = Paths.get(filePath);
@@ -154,7 +154,7 @@ public class FileBatchPersister implements BatchPersister {
         lock.writeLock().lock();
         try {
 
-            Batch batch = new Batch(AppMetr.SERVER_ID, lastBatchId, actionList);
+            Batch batch = new Batch(serverId, lastBatchId, actionList);
             byte[] serializedBatch = SerializationUtils.serializeJsonGzip(batch, true);
 
             Path file = getBatchFile(lastBatchId);
@@ -181,5 +181,9 @@ public class FileBatchPersister implements BatchPersister {
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    @Override public void setServerId(String serverId) {
+        this.serverId = serverId;
     }
 }

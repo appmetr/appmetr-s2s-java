@@ -1,6 +1,5 @@
 package com.appmetr.s2s.persister;
 
-import com.appmetr.s2s.AppMetr;
 import com.appmetr.s2s.Batch;
 import com.appmetr.s2s.events.Action;
 
@@ -12,6 +11,7 @@ public class MemoryBatchPersister implements BatchPersister {
 
     private final Queue<Batch> batchQueue = new ArrayDeque<>();
     private int batchId = 0;
+    private String serverId;
 
     @Override public Batch getNext() {
         synchronized (batchQueue) {
@@ -22,7 +22,7 @@ public class MemoryBatchPersister implements BatchPersister {
 
     @Override public void persist(List<Action> actionList) {
         synchronized (batchQueue) {
-            Batch batch = new Batch(AppMetr.SERVER_ID, batchId++, actionList);
+            Batch batch = new Batch(serverId, batchId++, actionList);
             batchQueue.add(batch);
         }
     }
@@ -31,5 +31,9 @@ public class MemoryBatchPersister implements BatchPersister {
         synchronized (batchQueue) {
             batchQueue.poll();
         }
+    }
+
+    @Override public void setServerId(String serverId) {
+        this.serverId = serverId;
     }
 }

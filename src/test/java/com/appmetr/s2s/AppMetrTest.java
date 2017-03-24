@@ -2,6 +2,7 @@ package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Event;
 import com.appmetr.s2s.persister.FileBatchPersister;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public class AppMetrTest {
         appMetr.stop();
     }
 
-    //TODO ingore it when hang up bug will be fixed
+    @Ignore
     @Test
     public void testHangUp() throws Exception {
         AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));

@@ -24,8 +24,6 @@ public class AppMetr {
     private static final long MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
     private static final int MAX_EVENTS_COUNT = FileBatchPersister.REBATCH_THRESHOLD_ITEM_COUNT;
 
-    public static final String SERVER_ID = UUID.randomUUID().toString();
-
     private final String token;
     private final String url;
     private final BatchPersister batchPersister;
@@ -54,6 +52,7 @@ public class AppMetr {
         this.url = url;
         this.token = token;
         this.batchPersister = persister;
+        persister.setServerId(UUID.randomUUID().toString());
         this.flushExecutor = flushExecutor;
         this.needFlushShutdown = needFlushShutdown;
         if (uploadExecutor != null) {
@@ -64,8 +63,8 @@ public class AppMetr {
             this.needUploadShutdown = false;
         }
 
-        flushSchedule = new ScheduledAndForced(flushExecutor, this::flush, getFlushPeriod());
-        uploadSchedule = new ScheduledAndForced(uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
+        flushSchedule = new ScheduledAndForced(this.flushExecutor, this::flush, getFlushPeriod());
+        uploadSchedule = new ScheduledAndForced(this.uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
     }
 
     public AppMetr(String token, String url) {

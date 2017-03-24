@@ -108,14 +108,14 @@ public class ScheduledAndForced {
                             log.error("Error during execution", error);
                             throw error;
                         } finally {
-                            scheduledFuture = executor.schedule(runnable, period, TimeUnit.MILLISECONDS);
+                            scheduledFuture = executor.schedule(this, period, TimeUnit.MILLISECONDS);
                             finishedTime = System.currentTimeMillis();
                         }
                     } finally {
                         taskLock.unlock();
                     }
                 } else {
-                    scheduledFuture = executor.schedule(runnable, period, TimeUnit.MILLISECONDS);
+                    scheduledFuture = executor.schedule(this, period, TimeUnit.MILLISECONDS);
                 }
             }
         };

@@ -23,4 +23,6 @@ public interface BatchPersister {
      * Remove oldest batch from storage.
      */
     public void remove();
+
+    public void setServerId(String serverId);
 }

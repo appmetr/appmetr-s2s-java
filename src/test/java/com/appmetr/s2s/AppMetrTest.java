@@ -29,6 +29,13 @@ public class AppMetrTest {
     }
 
     @Test
+    public void testHangUp() throws Exception {
+        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
+
+        Thread.sleep(600000);
+    }
+
+    @Test
     public void testMemoryPersister() {
         AppMetr appMetr = new AppMetr(token, url);
         for (int i = 0; i < 500; i++) {

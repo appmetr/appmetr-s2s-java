@@ -24,8 +24,6 @@ public class AppMetr {
     private static final long MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
     private static final int MAX_EVENTS_COUNT = FileBatchPersister.REBATCH_THRESHOLD_ITEM_COUNT;
 
-    public final String serverId = UUID.randomUUID().toString();
-
     private final String token;
     private final String url;
     private final BatchPersister batchPersister;
@@ -54,7 +52,7 @@ public class AppMetr {
         this.url = url;
         this.token = token;
         this.batchPersister = persister;
-        persister.setServerId(serverId);
+        persister.setServerId(UUID.randomUUID().toString());
         this.flushExecutor = flushExecutor;
         this.needFlushShutdown = needFlushShutdown;
         if (uploadExecutor != null) {

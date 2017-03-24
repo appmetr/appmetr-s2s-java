@@ -28,6 +28,7 @@ public class AppMetrTest {
         appMetr.stop();
     }
 
+    //TODO ingore it when hang up bug will be fixed
     @Test
     public void testHangUp() throws Exception {
         AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));

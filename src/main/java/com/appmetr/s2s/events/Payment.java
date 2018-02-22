@@ -10,6 +10,8 @@ public class Payment extends Action {
     private String psUserSpentCurrencyAmount;
     private String appCurrencyCode;
     private String appCurrencyAmount;
+    private String psUserStoreCountryCode;
+    private Boolean isSandbox;
 
     public Payment(String orderId,
                    String transactionId,
@@ -19,13 +21,21 @@ public class Payment extends Action {
         this(orderId, transactionId, processor, psUserSpentCurrencyCode, psUserSpentCurrencyAmount, null, null);
     }
 
+    public Payment(String orderId, String transactionId, String processor, String psUserSpentCurrencyCode,
+                   String psUserSpentCurrencyAmount, String appCurrencyCode, String appCurrencyAmount) {
+        this(orderId, transactionId, processor, psUserSpentCurrencyCode, psUserSpentCurrencyAmount,
+                appCurrencyCode, appCurrencyAmount, null, null);
+    }
+
     public Payment(String orderId,
                    String transactionId,
                    String processor,
                    String psUserSpentCurrencyCode,
                    String psUserSpentCurrencyAmount,
                    String appCurrencyCode,
-                   String appCurrencyAmount) {
+                   String appCurrencyAmount,
+                   String psUserStoreCountryCode,
+                   Boolean isSandbox) {
         super(ACTION);
 
         this.orderId = orderId;
@@ -35,6 +45,8 @@ public class Payment extends Action {
         this.psUserSpentCurrencyAmount = psUserSpentCurrencyAmount;
         this.appCurrencyCode = appCurrencyCode;
         this.appCurrencyAmount = appCurrencyAmount;
+        this.psUserStoreCountryCode = psUserStoreCountryCode;
+        this.isSandbox = isSandbox;
     }
 
     public String getOrderId() {
@@ -65,6 +77,14 @@ public class Payment extends Action {
         return appCurrencyAmount;
     }
 
+    public String getPsUserStoreCountryCode() {
+        return psUserStoreCountryCode;
+    }
+
+    public Boolean getSandbox() {
+        return isSandbox;
+    }
+
     @Override public int calcApproximateSize() {
         return super.calcApproximateSize()
                 + getStringLength(orderId)
@@ -73,6 +93,7 @@ public class Payment extends Action {
                 + getStringLength(psUserSpentCurrencyCode)
                 + getStringLength(psUserSpentCurrencyAmount)
                 + getStringLength(appCurrencyCode)
-                + getStringLength(appCurrencyAmount);
+                + getStringLength(appCurrencyAmount)
+                + getStringLength(psUserStoreCountryCode);
     }
 }

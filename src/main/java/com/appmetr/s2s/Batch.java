@@ -10,6 +10,9 @@ public class Batch {
     private int batchId;
     private ArrayList<Action> batch;
 
+    private Batch() {
+    }
+
     public Batch(String serverId, int batchId, List<Action> actionList) {
         this.serverId = serverId;
         this.batchId = batchId;
@@ -30,9 +33,9 @@ public class Batch {
 
     @Override public String toString() {
         return "Batch{" +
-                "#events=" + batch.size() +
-                ", serverId=" + serverId +
+                "serverId=" + serverId +
                 ", batchId=" + batchId +
+                ", batch=" + batch +
                 '}';
     }
 }

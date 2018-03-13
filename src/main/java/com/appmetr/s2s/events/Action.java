@@ -1,5 +1,6 @@
 package com.appmetr.s2s.events;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,5 +63,14 @@ public abstract class Action {
 
     protected int getStringLength(String str) {
         return str == null ? 0 : str.length() * 2 + 24 + 16;    //24 - String object size, 16 - char[]
+    }
+
+    @Override public String toString() {
+        return "Action{" +
+                "action='" + action + '\'' +
+                ", timestamp=" + Instant.ofEpochMilli(timestamp) +
+                ", properties=" + properties +
+                ", userId='" + userId + '\'' +
+                '}';
     }
 }

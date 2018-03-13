@@ -1,9 +1,8 @@
 package com.appmetr.s2s;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,21 +16,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class HttpRequestService {
+    private static Logger log = LoggerFactory.getLogger(HttpRequestService.class);
+
     public static final int CONNECT_TIMEOUT = 60 * 1000;
     public static final int READ_TIMEOUT = 120 * 1000;
 
-    private static Logger logger = LoggerFactory.getLogger(HttpRequestService.class);
-    private static JsonParser jsonParser = new JsonParser();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private final static String serverMethodName = "server.trackS2S";
 
     public static boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
-        Map<String, String> params = new HashMap<String, String>(2);
+        final Map<String, String> params = new HashMap<String, String>(2);
         params.put("method", serverMethodName);
         params.put("token", token);
         params.put("timestamp", String.valueOf(new Date().getTime()));
 
-        URL url = new URL(httpURL + "?" + makeQueryString(params));
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        final URL url = new URL(httpURL + "?" + makeQueryString(params));
+        final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT);
         connection.setReadTimeout(READ_TIMEOUT);
 
@@ -48,36 +48,33 @@ public class HttpRequestService {
             out.close();
 
             // Execute HTTP Post Request
-            BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuilder result = new StringBuilder();
-            try {
+            final StringBuilder result = new StringBuilder();
+            try (BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                 String inputLine;
                 while ((inputLine = input.readLine()) != null) {
                     result.append(inputLine);
                 }
-            } finally {
-                input.close();
             }
 
             try {
-                JsonObject responseJson = jsonParser.parse(result.toString()).getAsJsonObject();
-                String status = null;
+                final JsonNode responseJson = objectMapper.readTree(result.toString());
+                JsonNode status = null;
                 if (!isError(responseJson)) {
-                    status = responseJson.get("response").getAsJsonObject().get("status").getAsString();
+                    status = responseJson.get("response").get("status");
                 }
 
-                if (status != null && status.compareTo("OK") == 0) {
+                if (status != null && "OK".equalsIgnoreCase(status.textValue())) {
                     return true;
                 }
-            } catch (JsonSyntaxException jsonError) {
-                logger.error("Json exception", jsonError);
+            } catch (JsonParseException jsonError) {
+                log.error("Json exception", jsonError);
             }
         }
         catch (SocketTimeoutException timeoutException){
-            logger.error("Socket timeout", timeoutException);
+            log.error("Socket timeout", timeoutException);
         }
         catch (Exception error) {
-            logger.error("Server error", error);
+            log.error("Server error", error);
         } finally {
             connection.disconnect();
         }
@@ -85,18 +82,17 @@ public class HttpRequestService {
         return false;
     }
 
-    private static boolean isError(JsonObject response) {
-        final JsonElement error = response.get("error");
+    private static boolean isError(JsonNode response) {
+        final JsonNode error = response.get("error");
         if (error == null) {
             return false;
         }
-        final JsonObject errorObject = error.getAsJsonObject();
 
-        logger.error("Cant send batch: {}", errorObject.get("message").getAsString());
+        log.error("Can't send batch: {}", error.get("message").textValue());
 
-        final JsonElement stackTrace = errorObject.get("stackTrace");
+        final JsonNode stackTrace = error.get("stackTrace");
         if (stackTrace != null) {
-            logger.error(stackTrace.getAsString());
+            log.error(stackTrace.textValue());
         }
 
         return true;

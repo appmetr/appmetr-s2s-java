@@ -5,9 +5,13 @@ public class Level extends Action {
 
     private int level;
 
-    public Level(int level) {
+    //Only for Jackson deserialization
+    private Level() {
         super(ACTION);
+    }
 
+    public Level(int level) {
+        this();
         this.level = level;
     }
 
@@ -17,5 +21,11 @@ public class Level extends Action {
 
     @Override public int calcApproximateSize() {
         return super.calcApproximateSize() + 4;
+    }
+
+    @Override public String toString() {
+        return "Level{" +
+                "level=" + level +
+                "} " + super.toString();
     }
 }

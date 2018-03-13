@@ -5,9 +5,13 @@ public class Event extends Action {
 
     private String event;
 
-    public Event(String event) {
+    //Only for Jackson deserialization
+    private Event() {
         super(ACTION);
+    }
 
+    public Event(String event) {
+        this();
         this.event = event;
     }
 
@@ -17,5 +21,11 @@ public class Event extends Action {
 
     @Override public int calcApproximateSize() {
         return super.calcApproximateSize() + getStringLength(event);
+    }
+
+    @Override public String toString() {
+        return "Event{" +
+                "event='" + event + '\'' +
+                "} " + super.toString();
     }
 }

@@ -186,13 +186,14 @@ public class AppMetr {
             uploadSchedule.stop();
 
             if (needFlushShutdown) {
-                flushExecutor.shutdownNow();
+                flushExecutor.shutdown();
             }
             if (needUploadShutdown) {
-                uploadExecutor.shutdownNow();
+                uploadExecutor.shutdown();
             }
+
         } catch (InterruptedException e) {
-            log.error("Stop was interrupted", e);
+            log.error("AppMetr stopping was interrupted", e);
             Thread.currentThread().interrupt();
         }
     }

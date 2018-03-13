@@ -6,4 +6,8 @@ public class AddToPropertiesValue extends Action {
     public AddToPropertiesValue() {
         super(ACTION);
     }
+
+    @Override public String toString() {
+        return "AddToPropertiesValue{} " + super.toString();
+    }
 }

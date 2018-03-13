@@ -3,10 +3,7 @@ package com.appmetr.s2s;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -79,7 +76,7 @@ public class ScheduledAndForced {
                 futureLock.unlock();
             }
 
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | CancellationException e) {
             log.error("Exception while execution", e);
         }
     }

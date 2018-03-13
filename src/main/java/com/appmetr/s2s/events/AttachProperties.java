@@ -6,4 +6,8 @@ public class AttachProperties extends Action {
     public AttachProperties() {
         super(ACTION);
     }
+
+    @Override public String toString() {
+        return "AttachProperties{} " + super.toString();
+    }
 }

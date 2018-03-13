@@ -13,6 +13,11 @@ public class Payment extends Action {
     private String psUserStoreCountryCode;
     private Boolean isSandbox;
 
+    //Only for Jackson deserialization
+    private Payment() {
+        super(ACTION);
+    }
+
     public Payment(String orderId,
                    String transactionId,
                    String processor,
@@ -36,7 +41,7 @@ public class Payment extends Action {
                    String appCurrencyAmount,
                    String psUserStoreCountryCode,
                    Boolean isSandbox) {
-        super(ACTION);
+        this();
 
         this.orderId = orderId;
         this.transactionId = transactionId;
@@ -95,5 +100,19 @@ public class Payment extends Action {
                 + getStringLength(appCurrencyCode)
                 + getStringLength(appCurrencyAmount)
                 + getStringLength(psUserStoreCountryCode);
+    }
+
+    @Override public String toString() {
+        return "Payment{" +
+                "orderId='" + orderId + '\'' +
+                ", transactionId='" + transactionId + '\'' +
+                ", processor='" + processor + '\'' +
+                ", psUserSpentCurrencyCode='" + psUserSpentCurrencyCode + '\'' +
+                ", psUserSpentCurrencyAmount='" + psUserSpentCurrencyAmount + '\'' +
+                ", appCurrencyCode='" + appCurrencyCode + '\'' +
+                ", appCurrencyAmount='" + appCurrencyAmount + '\'' +
+                ", psUserStoreCountryCode='" + psUserStoreCountryCode + '\'' +
+                ", isSandbox=" + isSandbox +
+                "} " + super.toString();
     }
 }

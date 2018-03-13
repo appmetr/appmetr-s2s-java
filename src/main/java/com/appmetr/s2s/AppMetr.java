@@ -100,7 +100,7 @@ public class AppMetr {
         listLock.lock();
         try {
             if (actionList.isEmpty()) {
-                log.info("Nothing to flush");
+                log.debug("Nothing to flush");
                 return;
             }
 
@@ -112,7 +112,7 @@ public class AppMetr {
         }
 
         batchPersister.persist(actionsToPersist);
-        log.info("Flushing completed");
+        log.debug("Flushing completed");
 
         uploadSchedule.force();
     }
@@ -122,7 +122,7 @@ public class AppMetr {
     }
 
     protected void upload() {
-        log.info("Upload starting");
+        log.debug("Upload starting");
 
         Batch batch;
         int uploadedBatchCounter = 0;
@@ -147,7 +147,7 @@ public class AppMetr {
             }
             final long batchUploadEnd = System.currentTimeMillis();
 
-            log.info("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
+            log.debug("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
 
             if (result) {
                 log.trace("Batch {} successfully uploaded", batch.getBatchId());
@@ -160,7 +160,7 @@ public class AppMetr {
             }
         }
 
-        log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
+        log.debug("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 
     protected long getFlushPeriod() {

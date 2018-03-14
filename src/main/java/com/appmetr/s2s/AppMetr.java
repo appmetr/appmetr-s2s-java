@@ -64,7 +64,7 @@ public class AppMetr {
         }
 
         flushSchedule = new ScheduledAndForced(this.flushExecutor, this::flush, getFlushPeriod());
-        uploadSchedule = new ScheduledAndForced(this.uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
+        uploadSchedule = new ScheduledAndForced(this.uploadExecutor, this::upload, (long) (getFlushPeriod() * 1.5), getUploadPeriod());
     }
 
     public AppMetr(String token, String url) {
@@ -112,7 +112,8 @@ public class AppMetr {
         }
 
         batchPersister.persist(actionsToPersist);
-        log.debug("Flushing completed");
+
+        log.debug("Flushing completed for " + actionsToPersist.size() + " actions");
 
         uploadSchedule.force();
     }

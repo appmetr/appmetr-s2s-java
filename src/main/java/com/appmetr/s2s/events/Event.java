@@ -1,5 +1,7 @@
 package com.appmetr.s2s.events;
 
+import java.util.Objects;
+
 public class Event extends Action {
     private static final String ACTION = "trackEvent";
 
@@ -23,9 +25,21 @@ public class Event extends Action {
         return super.calcApproximateSize() + getStringLength(event);
     }
 
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        Event event1 = (Event) o;
+        return Objects.equals(getEvent(), event1.getEvent());
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash(super.hashCode(), getEvent());
+    }
+
     @Override public String toString() {
         return "Event{" +
-                "event='" + event + '\'' +
+                "event='" + getEvent() + '\'' +
                 "} " + super.toString();
     }
 }

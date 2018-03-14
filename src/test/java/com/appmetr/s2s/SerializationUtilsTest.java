@@ -7,34 +7,41 @@ import org.junit.Test;
 
 import java.util.Collections;
 
+import static org.junit.Assert.assertEquals;
+
 public class SerializationUtilsTest {
 
     @Test
     public void serializeEvent() throws Exception {
-        byte[] bytes = SerializationUtils.serializeJsonGzip(new Batch("s1", 1, Collections.singletonList(new Event("test"))), true);
-        Batch batch = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(batch);
+        Batch original = new Batch("s1", 1, Collections.singletonList(new Event("test")));
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
     }
 
     @Test()
     public void serializeLevel() throws Exception {
-        byte[] bytes = SerializationUtils.serializeJsonGzip(new Batch("s1", 2, Collections.singletonList(new Level(2))), true);
-        Batch batch = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(batch);
+        Batch original = new Batch("s1", 2, Collections.singletonList(new Level(2)));
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
     }
 
     @Test()
     public void serializePayment() throws Exception {
-        byte[] bytes = SerializationUtils.serializeJsonGzip(new Batch("s1", 2, Collections.singletonList(
-                new Payment("order1", "trans1", "proc1", "USD", "123"))), true);
-        Batch batch = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(batch);
+        Batch original = new Batch("s1", 2, Collections.singletonList(
+                new Payment("order1", "trans1", "proc1", "USD", "123")));
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
     }
 
     @Test(expected = RuntimeException.class)
     public void serializeWithoutTypeInfo() throws Exception {
         byte[] bytes = SerializationUtils.serializeJsonGzip(new Batch("s2", 9, Collections.singletonList(new Event("test"))), false);
-        Batch batch = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(batch);
+        SerializationUtils.deserializeJsonGzip(bytes);
     }
 }

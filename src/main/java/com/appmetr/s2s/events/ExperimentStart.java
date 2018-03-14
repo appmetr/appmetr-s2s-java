@@ -1,5 +1,7 @@
 package com.appmetr.s2s.events;
 
+import java.util.Objects;
+
 public class ExperimentStart extends Experiment {
     private String group;
 
@@ -22,9 +24,21 @@ public class ExperimentStart extends Experiment {
         return super.calcApproximateSize() + getStringLength(group);
     }
 
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        ExperimentStart that = (ExperimentStart) o;
+        return Objects.equals(getGroup(), that.getGroup());
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash(super.hashCode(), getGroup());
+    }
+
     @Override public String toString() {
         return "ExperimentStart{" +
-                "group='" + group + '\'' +
+                "group='" + getGroup() + '\'' +
                 "} " + super.toString();
     }
 }

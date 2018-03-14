@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public abstract class Action {
     private String action;
@@ -65,12 +66,26 @@ public abstract class Action {
         return str == null ? 0 : str.length() * 2 + 24 + 16;    //24 - String object size, 16 - char[]
     }
 
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Action action1 = (Action) o;
+        return getTimestamp() == action1.getTimestamp() &&
+                Objects.equals(getAction(), action1.getAction()) &&
+                Objects.equals(getProperties(), action1.getProperties()) &&
+                Objects.equals(getUserId(), action1.getUserId());
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash(getAction(), getTimestamp(), getProperties(), getUserId());
+    }
+
     @Override public String toString() {
         return "Action{" +
-                "action='" + action + '\'' +
-                ", timestamp=" + Instant.ofEpochMilli(timestamp) +
-                ", properties=" + properties +
-                ", userId='" + userId + '\'' +
+                "action='" + getAction() + '\'' +
+                ", timestamp=" + Instant.ofEpochMilli(getTimestamp()) +
+                ", properties=" + getProperties() +
+                ", userId='" + getUserId() + '\'' +
                 '}';
     }
 }

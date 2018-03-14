@@ -39,20 +39,23 @@ public class AppMetr {
 
     private final ScheduledAndForced flushSchedule;
     private final ScheduledAndForced uploadSchedule;
+    private final boolean retryBatchUpload;
 
     public AppMetr(String token, String url, BatchPersister persister) {
         this(token, url, persister,
                 Executors.newSingleThreadScheduledExecutor(), true,
-                Executors.newSingleThreadScheduledExecutor(), true);
+                Executors.newSingleThreadScheduledExecutor(), true, true);
     }
 
     public AppMetr(String token, String url, BatchPersister persister,
                    ScheduledExecutorService flushExecutor, boolean needFlushShutdown,
-                   ScheduledExecutorService uploadExecutor, boolean needUploadShutdown) {
+                   ScheduledExecutorService uploadExecutor, boolean needUploadShutdown,
+                   boolean retryBatchUpload) {
         this.url = url;
         this.token = token;
         this.batchPersister = persister;
         persister.setServerId(UUID.randomUUID().toString());
+        this.retryBatchUpload = retryBatchUpload;
         this.flushExecutor = flushExecutor;
         this.needFlushShutdown = needFlushShutdown;
         if (uploadExecutor != null) {
@@ -157,7 +160,10 @@ public class AppMetr {
                 sendBatchesBytes += batchBytes.length;
             } else {
                 log.error("Error while upload batch {}. Took {} ms", batch.getBatchId(), batchUploadEnd - batchUploadStart);
-                break;
+                if (retryBatchUpload) {
+                    break;
+                }
+                batchPersister.remove();
             }
         }
 

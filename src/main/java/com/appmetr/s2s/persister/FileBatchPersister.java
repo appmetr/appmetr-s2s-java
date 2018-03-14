@@ -17,6 +17,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class FileBatchPersister implements BatchPersister {
     private final static Logger log = LoggerFactory.getLogger(FileBatchPersister.class);
+
     private static final int BYTES_IN_MB = 1024 * 1024;
     public static final int REBATCH_THRESHOLD_ITEM_COUNT = 1000;
     public static final int REBATCH_THRESHOLD_FILE_SIZE = 1 * BYTES_IN_MB;
@@ -65,7 +66,7 @@ public class FileBatchPersister implements BatchPersister {
     }
 
     private void initPersistedFiles() {
-        List<Integer> ids = new ArrayList<>();
+        final List<Integer> ids = new ArrayList<>();
         try {
             for (Path file : Files.newDirectoryStream(path, BATCH_FILE_GLOB_PATTERN)) {
                 ids.add(getFileId(file.getFileName().toString()));
@@ -96,10 +97,10 @@ public class FileBatchPersister implements BatchPersister {
             lastBatchId = 0;
         }
 
-        log.info("Init lastBatchId with {}", lastBatchId);
+        log.debug("Init lastBatchId with {}", lastBatchId);
 
         fileIds = new ArrayDeque<>(ids);
-        log.info("Initialized {} batches.", ids.size());
+        log.debug("Initialized {} batches.", ids.size());
     }
 
     private Batch getBatchFromFile(Path batchFile) {
@@ -108,7 +109,7 @@ public class FileBatchPersister implements BatchPersister {
                 return null;
             }
 
-            byte[] serializedBatch = Files.readAllBytes(batchFile);
+            final byte[] serializedBatch = Files.readAllBytes(batchFile);
             return SerializationUtils.deserializeJsonGzip(serializedBatch);
         } catch (IOException e) {
             log.error("(getBatchFromFile) Exception while getting batch from file {}:", batchFile, e);
@@ -127,24 +128,22 @@ public class FileBatchPersister implements BatchPersister {
     @Override public Batch getNext() {
         lock.readLock().lock();
         try {
-            Batch batch;
 
             while (true) {
-                Integer batchId = fileIds.peek();
+                final Integer batchId = fileIds.peek();
 
                 if (batchId == null) {
                     return null;
                 }
 
-                batch = getBatchFromFile(getBatchFile(batchId));
+                final Batch batch = getBatchFromFile(getBatchFile(batchId));
                 if (batch != null) {
-                    break;
+                    return batch;
                 }
 
                 fileIds.remove();
             }
 
-            return batch;
         } finally {
             lock.readLock().unlock();
         }
@@ -154,10 +153,10 @@ public class FileBatchPersister implements BatchPersister {
         lock.writeLock().lock();
         try {
 
-            Batch batch = new Batch(serverId, lastBatchId, actionList);
-            byte[] serializedBatch = SerializationUtils.serializeJsonGzip(batch, true);
+            final Batch batch = new Batch(serverId, lastBatchId, actionList);
+            final byte[] serializedBatch = SerializationUtils.serializeJsonGzip(batch, true);
 
-            Path file = getBatchFile(lastBatchId);
+            final Path file = getBatchFile(lastBatchId);
 
             try {
                 Files.write(file, serializedBatch);

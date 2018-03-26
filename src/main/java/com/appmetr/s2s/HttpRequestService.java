@@ -24,7 +24,7 @@ public class HttpRequestService {
     private final static String serverMethodName = "server.trackS2S";
 
     public static boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
-        final Map<String, String> params = new HashMap<String, String>(2);
+        final Map<String, String> params = new HashMap<>(2);
         params.put("method", serverMethodName);
         params.put("token", token);
         params.put("timestamp", String.valueOf(new Date().getTime()));

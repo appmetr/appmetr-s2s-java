@@ -39,20 +39,23 @@ public class AppMetr {
 
     private final ScheduledAndForced flushSchedule;
     private final ScheduledAndForced uploadSchedule;
+    private final boolean retryBatchUpload;
 
     public AppMetr(String token, String url, BatchPersister persister) {
         this(token, url, persister,
                 Executors.newSingleThreadScheduledExecutor(), true,
-                Executors.newSingleThreadScheduledExecutor(), true);
+                Executors.newSingleThreadScheduledExecutor(), true, true);
     }
 
     public AppMetr(String token, String url, BatchPersister persister,
                    ScheduledExecutorService flushExecutor, boolean needFlushShutdown,
-                   ScheduledExecutorService uploadExecutor, boolean needUploadShutdown) {
+                   ScheduledExecutorService uploadExecutor, boolean needUploadShutdown,
+                   boolean retryBatchUpload) {
         this.url = url;
         this.token = token;
         this.batchPersister = persister;
         persister.setServerId(UUID.randomUUID().toString());
+        this.retryBatchUpload = retryBatchUpload;
         this.flushExecutor = flushExecutor;
         this.needFlushShutdown = needFlushShutdown;
         if (uploadExecutor != null) {
@@ -64,7 +67,7 @@ public class AppMetr {
         }
 
         flushSchedule = new ScheduledAndForced(this.flushExecutor, this::flush, getFlushPeriod());
-        uploadSchedule = new ScheduledAndForced(this.uploadExecutor, this::upload, getFlushPeriod() / 2, getUploadPeriod());
+        uploadSchedule = new ScheduledAndForced(this.uploadExecutor, this::upload, (long) (getFlushPeriod() * 1.5), getUploadPeriod());
     }
 
     public AppMetr(String token, String url) {
@@ -100,7 +103,7 @@ public class AppMetr {
         listLock.lock();
         try {
             if (actionList.isEmpty()) {
-                log.info("Nothing to flush");
+                log.debug("Nothing to flush");
                 return;
             }
 
@@ -112,7 +115,8 @@ public class AppMetr {
         }
 
         batchPersister.persist(actionsToPersist);
-        log.info("Flushing completed");
+
+        log.debug("Flushing completed for {} actions", actionsToPersist.size());
 
         uploadSchedule.force();
     }
@@ -122,7 +126,7 @@ public class AppMetr {
     }
 
     protected void upload() {
-        log.info("Upload starting");
+        log.debug("Upload starting");
 
         Batch batch;
         int uploadedBatchCounter = 0;
@@ -147,7 +151,7 @@ public class AppMetr {
             }
             final long batchUploadEnd = System.currentTimeMillis();
 
-            log.info("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
+            log.debug("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
 
             if (result) {
                 log.trace("Batch {} successfully uploaded", batch.getBatchId());
@@ -156,11 +160,14 @@ public class AppMetr {
                 sendBatchesBytes += batchBytes.length;
             } else {
                 log.error("Error while upload batch {}. Took {} ms", batch.getBatchId(), batchUploadEnd - batchUploadStart);
-                break;
+                if (retryBatchUpload) {
+                    break;
+                }
+                batchPersister.remove();
             }
         }
 
-        log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
+        log.debug("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 
     protected long getFlushPeriod() {
@@ -186,13 +193,14 @@ public class AppMetr {
             uploadSchedule.stop();
 
             if (needFlushShutdown) {
-                flushExecutor.shutdownNow();
+                flushExecutor.shutdown();
             }
             if (needUploadShutdown) {
-                uploadExecutor.shutdownNow();
+                uploadExecutor.shutdown();
             }
+
         } catch (InterruptedException e) {
-            log.error("Stop was interrupted", e);
+            log.error("AppMetr stopping was interrupted", e);
             Thread.currentThread().interrupt();
         }
     }

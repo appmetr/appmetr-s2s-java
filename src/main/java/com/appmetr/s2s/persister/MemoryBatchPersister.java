@@ -15,15 +15,13 @@ public class MemoryBatchPersister implements BatchPersister {
 
     @Override public Batch getNext() {
         synchronized (batchQueue) {
-            if (batchQueue.size() == 0) return null;
             return batchQueue.peek();
         }
     }
 
     @Override public void persist(List<Action> actionList) {
         synchronized (batchQueue) {
-            Batch batch = new Batch(serverId, batchId++, actionList);
-            batchQueue.add(batch);
+            batchQueue.add(new Batch(serverId, batchId++, actionList));
         }
     }
 

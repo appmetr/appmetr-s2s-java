@@ -3,10 +3,7 @@ package com.appmetr.s2s;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -28,7 +25,7 @@ public class ScheduledAndForced {
     private volatile Future<?> scheduledFuture;
     private Future<?> forcedFuture;
     private long finishedTime;
-    private boolean stopped;
+    private volatile boolean stopped;
 
     public ScheduledAndForced(ScheduledExecutorService executor, Runnable runnable, BooleanSupplier predicate, long initialDelay, long period) {
         this.executor = executor;
@@ -47,7 +44,7 @@ public class ScheduledAndForced {
         this(executor, runnable, period, period);
     }
 
-    public synchronized void force() {
+    public void force() {
         checkStopped();
 
         futureLock.lock();
@@ -62,12 +59,17 @@ public class ScheduledAndForced {
 
     public synchronized void stop() throws InterruptedException {
         checkStopped();
-        stopped = true;
 
         try {
-            if (!scheduledFuture.cancel(false)) {
-                scheduledFuture.get();
-                scheduledFuture.cancel(false);
+            taskLock.lock();
+            try {
+                stopped = true;
+                if (!scheduledFuture.cancel(false)) {
+                    scheduledFuture.get();
+                    scheduledFuture.cancel(false);
+                }
+            } finally {
+                taskLock.unlock();
             }
 
             futureLock.lock();
@@ -79,7 +81,7 @@ public class ScheduledAndForced {
                 futureLock.unlock();
             }
 
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | CancellationException e) {
             log.error("Exception while execution", e);
         }
     }
@@ -115,7 +117,9 @@ public class ScheduledAndForced {
                         taskLock.unlock();
                     }
                 } else {
-                    scheduledFuture = executor.schedule(this, period, TimeUnit.MILLISECONDS);
+                    if (!stopped) {
+                        scheduledFuture = executor.schedule(this, period, TimeUnit.MILLISECONDS);
+                    }
                 }
             }
         };

@@ -1,5 +1,7 @@
 package com.appmetr.s2s.events;
 
+import java.util.Objects;
+
 public class Payment extends Action {
     private static final String ACTION = "trackPayment";
 
@@ -12,6 +14,11 @@ public class Payment extends Action {
     private String appCurrencyAmount;
     private String psUserStoreCountryCode;
     private Boolean isSandbox;
+
+    //Only for Jackson deserialization
+    private Payment() {
+        super(ACTION);
+    }
 
     public Payment(String orderId,
                    String transactionId,
@@ -36,7 +43,7 @@ public class Payment extends Action {
                    String appCurrencyAmount,
                    String psUserStoreCountryCode,
                    Boolean isSandbox) {
-        super(ACTION);
+        this();
 
         this.orderId = orderId;
         this.transactionId = transactionId;
@@ -95,5 +102,41 @@ public class Payment extends Action {
                 + getStringLength(appCurrencyCode)
                 + getStringLength(appCurrencyAmount)
                 + getStringLength(psUserStoreCountryCode);
+    }
+
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        Payment payment = (Payment) o;
+        return Objects.equals(getOrderId(), payment.getOrderId()) &&
+                Objects.equals(getTransactionId(), payment.getTransactionId()) &&
+                Objects.equals(getProcessor(), payment.getProcessor()) &&
+                Objects.equals(getPsUserSpentCurrencyCode(), payment.getPsUserSpentCurrencyCode()) &&
+                Objects.equals(getPsUserSpentCurrencyAmount(), payment.getPsUserSpentCurrencyAmount()) &&
+                Objects.equals(getAppCurrencyCode(), payment.getAppCurrencyCode()) &&
+                Objects.equals(getAppCurrencyAmount(), payment.getAppCurrencyAmount()) &&
+                Objects.equals(getPsUserStoreCountryCode(), payment.getPsUserStoreCountryCode()) &&
+                Objects.equals(getSandbox(), payment.getSandbox());
+    }
+
+    @Override public int hashCode() {
+        return Objects.hash(super.hashCode(), getOrderId(), getTransactionId(), getProcessor(),
+                getPsUserSpentCurrencyCode(), getPsUserSpentCurrencyAmount(), getAppCurrencyCode(),
+                getAppCurrencyAmount(), getPsUserStoreCountryCode(), getSandbox());
+    }
+
+    @Override public String toString() {
+        return "Payment{" +
+                "orderId='" + getOrderId() + '\'' +
+                ", transactionId='" + getTransactionId() + '\'' +
+                ", processor='" + getProcessor() + '\'' +
+                ", psUserSpentCurrencyCode='" + getPsUserSpentCurrencyCode() + '\'' +
+                ", psUserSpentCurrencyAmount='" + getPsUserSpentCurrencyAmount() + '\'' +
+                ", appCurrencyCode='" + getAppCurrencyCode() + '\'' +
+                ", appCurrencyAmount='" + getAppCurrencyAmount() + '\'' +
+                ", psUserStoreCountryCode='" + getPsUserStoreCountryCode() + '\'' +
+                ", isSandbox=" + getSandbox() +
+                "} " + super.toString();
     }
 }

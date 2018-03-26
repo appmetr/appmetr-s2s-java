@@ -44,4 +44,35 @@ public class SerializationUtilsTest {
         byte[] bytes = SerializationUtils.serializeJsonGzip(new Batch("s2", 9, Collections.singletonList(new Event("test"))), false);
         SerializationUtils.deserializeJsonGzip(bytes);
     }
+
+    // --- tests compatibility with Gson serialization
+
+    @Test
+    public void serializeEvent_Gson() throws Exception {
+        Batch original = new Batch("s1", 1, Collections.singletonList(new Event("test")));
+        byte[] bytes = SerializationUtilsGson.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
+    }
+
+    @Test()
+    public void serializeLevel_Gson() throws Exception {
+        Batch original = new Batch("s1", 2, Collections.singletonList(new Level(2)));
+        byte[] bytes = SerializationUtilsGson.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
+    }
+
+    @Test()
+    public void serializePayment_Gson() throws Exception {
+        Batch original = new Batch("s1", 2, Collections.singletonList(
+                new Payment("order1", "trans1", "proc1", "USD", "123")));
+        byte[] bytes = SerializationUtilsGson.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
+    }
+
 }

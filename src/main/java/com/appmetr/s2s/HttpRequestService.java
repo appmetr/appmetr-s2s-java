@@ -1,6 +1,5 @@
 package com.appmetr.s2s;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -16,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class HttpRequestService {
-    private static Logger log = LoggerFactory.getLogger(HttpRequestService.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpRequestService.class);
 
     public static final int CONNECT_TIMEOUT = 60 * 1000;
     public static final int READ_TIMEOUT = 120 * 1000;
@@ -66,7 +65,7 @@ public class HttpRequestService {
                 if (status != null && "OK".equalsIgnoreCase(status.textValue())) {
                     return true;
                 }
-            } catch (JsonParseException jsonError) {
+            } catch (Exception jsonError) {
                 log.error("Json exception", jsonError);
             }
         }
@@ -88,11 +87,14 @@ public class HttpRequestService {
             return false;
         }
 
-        log.error("Can't send batch: {}", error.get("message").textValue());
+        final JsonNode message = error.get("message");
+        if (message != null) {
+            log.error("Can't send batch: {}", message.asText());
+        }
 
         final JsonNode stackTrace = error.get("stackTrace");
         if (stackTrace != null) {
-            log.error(stackTrace.textValue());
+            log.error(stackTrace.asText());
         }
 
         return true;

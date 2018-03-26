@@ -116,7 +116,7 @@ public class AppMetr {
 
         batchPersister.persist(actionsToPersist);
 
-        log.debug("Flushing completed for " + actionsToPersist.size() + " actions");
+        log.debug("Flushing completed for {} actions", actionsToPersist.size());
 
         uploadSchedule.force();
     }

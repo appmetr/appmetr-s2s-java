@@ -31,6 +31,7 @@ public class AppMetr {
     private final ScheduledExecutorService uploadExecutor;
     private final boolean needFlushShutdown;
     private final boolean needUploadShutdown;
+    private final HttpRequestService httpRequestService = createHttpRequestService();
     private volatile boolean stopped = false;
 
     private long eventsSize;
@@ -144,7 +145,7 @@ public class AppMetr {
 
             final long batchUploadStart = System.currentTimeMillis();
             try {
-                result = HttpRequestService.sendRequest(url, token, batchBytes);
+                result = httpRequestService.sendRequest(url, token, batchBytes);
             } catch (IOException e) {
                 log.error("IOException while sending request", e);
                 result = false;
@@ -203,5 +204,9 @@ public class AppMetr {
             log.error("AppMetr stopping was interrupted", e);
             Thread.currentThread().interrupt();
         }
+    }
+
+    protected HttpRequestService createHttpRequestService() {
+        return new HttpRequestService();
     }
 }

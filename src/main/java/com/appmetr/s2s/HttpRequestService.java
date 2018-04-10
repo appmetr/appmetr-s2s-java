@@ -17,13 +17,28 @@ import java.util.Map;
 public class HttpRequestService {
     private static final Logger log = LoggerFactory.getLogger(HttpRequestService.class);
 
-    public static final int CONNECT_TIMEOUT = 60 * 1000;
-    public static final int READ_TIMEOUT = 120 * 1000;
+    protected int connectTimeout = 60 * 1000;
+    protected int readTimeout = 120 * 1000;
+    protected ObjectMapper objectMapper = new ObjectMapper();
+    protected String serverMethodName = "server.trackS2S";
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-    private final static String serverMethodName = "server.trackS2S";
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
 
-    public static boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
+    public void setReadTimeout(int readTimeout) {
+        this.readTimeout = readTimeout;
+    }
+
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    public void setServerMethodName(String serverMethodName) {
+        this.serverMethodName = serverMethodName;
+    }
+
+    public boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
         final Map<String, String> params = new HashMap<>(2);
         params.put("method", serverMethodName);
         params.put("token", token);
@@ -31,8 +46,8 @@ public class HttpRequestService {
 
         final URL url = new URL(httpURL + "?" + makeQueryString(params));
         final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setConnectTimeout(CONNECT_TIMEOUT);
-        connection.setReadTimeout(READ_TIMEOUT);
+        connection.setConnectTimeout(connectTimeout);
+        connection.setReadTimeout(readTimeout);
 
         try {
             // Add body data
@@ -81,7 +96,7 @@ public class HttpRequestService {
         return false;
     }
 
-    private static boolean isError(JsonNode response) {
+    protected boolean isError(JsonNode response) {
         final JsonNode error = response.get("error");
         if (error == null) {
             return false;
@@ -100,7 +115,7 @@ public class HttpRequestService {
         return true;
     }
 
-    private static String makeQueryString(Map<String, String> params) {
+    protected String makeQueryString(Map<String, String> params) {
         StringBuilder queryBuilder = new StringBuilder();
         int paramCount = 0;
         for (Map.Entry<String, String> param : params.entrySet()) {

@@ -39,7 +39,7 @@ public class HttpRequestService {
     }
 
     public boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
-        final Map<String, String> params = new HashMap<>(2);
+        final Map<String, String> params = new HashMap<>(3);
         params.put("method", serverMethodName);
         params.put("token", token);
         params.put("timestamp", String.valueOf(new Date().getTime()));

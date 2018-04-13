@@ -16,8 +16,9 @@ public interface BatchPersister {
      * Persist list of events as Batch.
      *
      * @param actionList list of events.
+     * @return true if actions was successfully create false otherwise
      */
-    public void persist(List<Action> actionList);
+    public boolean persist(List<Action> actionList);
 
     /**
      * Remove oldest batch from storage.

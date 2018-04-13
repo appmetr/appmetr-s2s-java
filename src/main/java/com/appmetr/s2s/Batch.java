@@ -8,13 +8,13 @@ import java.util.Objects;
 
 public class Batch {
     private String serverId;
-    private int batchId;
+    private long batchId;
     private List<Action> batch;
 
     private Batch() {
     }
 
-    public Batch(String serverId, int batchId, List<Action> actionList) {
+    public Batch(String serverId, long batchId, List<Action> actionList) {
         this.serverId = serverId;
         this.batchId = batchId;
         batch = new ArrayList<>(actionList);
@@ -24,7 +24,7 @@ public class Batch {
         return serverId;
     }
 
-    public int getBatchId() {
+    public long getBatchId() {
         return batchId;
     }
 

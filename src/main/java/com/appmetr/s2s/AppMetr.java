@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
@@ -55,7 +54,6 @@ public class AppMetr {
         this.url = url;
         this.token = token;
         this.batchPersister = persister;
-        persister.setServerId(UUID.randomUUID().toString());
         this.retryBatchUpload = retryBatchUpload;
         this.flushExecutor = flushExecutor;
         this.needFlushShutdown = needFlushShutdown;
@@ -115,11 +113,12 @@ public class AppMetr {
             listLock.unlock();
         }
 
-        batchPersister.persist(actionsToPersist);
-
-        log.debug("Flushing completed for {} actions", actionsToPersist.size());
-
-        uploadSchedule.force();
+        if (batchPersister.persist(actionsToPersist)) {
+            log.debug("Flushing completed for {} actions", actionsToPersist.size());
+            uploadSchedule.force();
+        } else {
+            log.warn("Flushing failed for {} actions", actionsToPersist.size());
+        }
     }
 
     protected boolean isNeedToFlush() {

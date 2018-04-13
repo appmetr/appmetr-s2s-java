@@ -115,11 +115,12 @@ public class AppMetr {
             listLock.unlock();
         }
 
-        batchPersister.persist(actionsToPersist);
-
-        log.debug("Flushing completed for {} actions", actionsToPersist.size());
-
-        uploadSchedule.force();
+        if (batchPersister.persist(actionsToPersist)) {
+            log.debug("Flushing completed for {} actions", actionsToPersist.size());
+            uploadSchedule.force();
+        } else {
+            log.warn("Flushing failed for {} actions", actionsToPersist.size());
+        }
     }
 
     protected boolean isNeedToFlush() {

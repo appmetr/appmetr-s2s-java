@@ -18,22 +18,22 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class FileBatchPersister implements BatchPersister {
     private final static Logger log = LoggerFactory.getLogger(FileBatchPersister.class);
 
-    private static final int BYTES_IN_MB = 1024 * 1024;
+    public static final int BYTES_IN_MB = 1024 * 1024;
     public static final int REBATCH_THRESHOLD_ITEM_COUNT = 1000;
     public static final int REBATCH_THRESHOLD_FILE_SIZE = 1 * BYTES_IN_MB;
 
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    protected final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    private Queue<Integer> fileIds;
+    protected Queue<Long> fileIds;
 
-    private Path path;
-    private int lastBatchId;
+    protected Path path;
+    protected long lastBatchId;
 
-    private final Path batchIdFileSaver;
-    private final String BATCH_FILE_NAME = "batchFile#";
-    private final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE_NAME + "*";
-    private final String DIGITAL_FORMAT = "%011d";
-    private String serverId;
+    protected final Path batchIdFileSaver;
+    protected final String BATCH_FILE_NAME = "batchFile#";
+    protected final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE_NAME + "*";
+    protected final String DIGITAL_FORMAT = "%011d";
+    protected String serverId;
 
     public FileBatchPersister(String filePath) {
         path = Paths.get(filePath);
@@ -55,7 +55,7 @@ public class FileBatchPersister implements BatchPersister {
         initPersistedFiles();
     }
 
-    private void updateLastBatchId() {
+    protected void updateLastBatchId() {
         lastBatchId++;
 
         try {
@@ -65,8 +65,8 @@ public class FileBatchPersister implements BatchPersister {
         }
     }
 
-    private void initPersistedFiles() {
-        final List<Integer> ids = new ArrayList<>();
+    protected void initPersistedFiles() {
+        final List<Long> ids = new ArrayList<>();
         try {
             for (Path file : Files.newDirectoryStream(path, BATCH_FILE_GLOB_PATTERN)) {
                 ids.add(getFileId(file.getFileName().toString()));
@@ -103,7 +103,7 @@ public class FileBatchPersister implements BatchPersister {
         log.debug("Initialized {} batches.", ids.size());
     }
 
-    private Batch getBatchFromFile(Path batchFile) {
+    protected Batch getBatchFromFile(Path batchFile) {
         try {
             if (Files.notExists(batchFile) || Files.size(batchFile) == 0) {
                 return null;
@@ -117,12 +117,12 @@ public class FileBatchPersister implements BatchPersister {
         }
     }
 
-    private Path getBatchFile(Integer fileId) {
+    protected Path getBatchFile(Long fileId) {
         return fileId == null ? null : path.toAbsolutePath().resolve(BATCH_FILE_NAME + String.format(DIGITAL_FORMAT, fileId));
     }
 
-    private int getFileId(String batchFileName) {
-        return Integer.parseInt(batchFileName.substring(BATCH_FILE_NAME.length()));
+    protected long getFileId(String batchFileName) {
+        return Long.parseLong(batchFileName.substring(BATCH_FILE_NAME.length()));
     }
 
     @Override public Batch getNext() {
@@ -130,7 +130,7 @@ public class FileBatchPersister implements BatchPersister {
         try {
 
             while (true) {
-                final Integer batchId = fileIds.peek();
+                final Long batchId = fileIds.peek();
 
                 if (batchId == null) {
                     return null;
@@ -149,7 +149,7 @@ public class FileBatchPersister implements BatchPersister {
         }
     }
 
-    @Override public void persist(List<Action> actionList) {
+    @Override public boolean persist(List<Action> actionList) {
         lock.writeLock().lock();
         try {
 
@@ -166,6 +166,8 @@ public class FileBatchPersister implements BatchPersister {
             } catch (IOException e) {
                 log.error("(Persist) Exception while persist batch:", e);
             }
+
+            return true;
         } finally {
             lock.writeLock().unlock();
         }
@@ -174,7 +176,10 @@ public class FileBatchPersister implements BatchPersister {
     @Override public void remove() {
         lock.writeLock().lock();
         try {
-            Files.delete(getBatchFile(fileIds.poll()));
+            final Path batchFile = getBatchFile(fileIds.poll());
+            if (batchFile != null) {
+                Files.delete(batchFile);
+            }
         } catch (IOException e) {
             log.error("", e);
         } finally {

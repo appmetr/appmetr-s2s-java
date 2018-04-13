@@ -7,11 +7,12 @@ import java.time.Clock;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
+import java.util.UUID;
 
 public class MemoryBatchPersister implements BatchPersister {
 
     protected Queue<Batch> batchQueue = new ArrayDeque<>();
-    protected String serverId;
+    protected String serverId = UUID.randomUUID().toString();
     protected long previousBatchId;
     protected int batchesLimit;
     protected Clock clock = Clock.systemUTC();

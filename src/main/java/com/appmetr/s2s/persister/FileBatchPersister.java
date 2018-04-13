@@ -33,7 +33,7 @@ public class FileBatchPersister implements BatchPersister {
     protected final String BATCH_FILE_NAME = "batchFile#";
     protected final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE_NAME + "*";
     protected final String DIGITAL_FORMAT = "%011d";
-    protected String serverId;
+    protected String serverId = UUID.randomUUID().toString();
 
     public FileBatchPersister(String filePath) {
         path = Paths.get(filePath);

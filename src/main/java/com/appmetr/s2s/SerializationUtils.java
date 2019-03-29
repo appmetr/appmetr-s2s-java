@@ -77,7 +77,7 @@ public class SerializationUtils {
         }
     }
 
-    private static class ActionJsonSerializer extends StdSerializer<Action> {
+    static class ActionJsonSerializer extends StdSerializer<Action> {
 
         ActionJsonSerializer() {
             super(Action.class);
@@ -92,7 +92,7 @@ public class SerializationUtils {
         }
     }
 
-    private static class ActionJsonDeserializer extends StdDeserializer<Action> {
+    static class ActionJsonDeserializer extends StdDeserializer<Action> {
 
         ActionJsonDeserializer() {
             super(Action.class);

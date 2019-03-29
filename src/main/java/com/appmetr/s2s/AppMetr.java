@@ -73,6 +73,9 @@ public class AppMetr {
         this(token, url, new MemoryBatchPersister());
     }
 
+    /**
+     * Can blocks until a storage space become available
+     */
     public void track(Action newAction) {
         if (stopped) {
             throw new RuntimeException("Trying to track after stop!");
@@ -93,6 +96,13 @@ public class AppMetr {
         if (needFlush) {
             flushSchedule.force();
         }
+    }
+
+    /**
+     * @return {@code true} if a storage has a space and {@code false} if no space is currently available.
+     */
+    public boolean trackFast(Action newAction) {
+        return true;
     }
 
     protected void flush() {

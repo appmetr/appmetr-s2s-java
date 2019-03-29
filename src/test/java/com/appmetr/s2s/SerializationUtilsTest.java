@@ -1,8 +1,8 @@
 package com.appmetr.s2s;
 
-import com.appmetr.s2s.events.*;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.appmetr.s2s.events.Event;
+import com.appmetr.s2s.events.Level;
+import com.appmetr.s2s.events.Payment;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -16,6 +16,21 @@ import static java.util.Collections.singletonMap;
 import static org.junit.Assert.*;
 
 public class SerializationUtilsTest {
+
+    @Test
+    public void serializeEvent_() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        ObjectMapper objectMapperTyped = objectMapper.copy();
+        final SimpleModule module = new SimpleModule();
+        module.addSerializer(Action.class, new SerializationUtils.ActionJsonSerializer());
+        module.addDeserializer(Action.class, new SerializationUtils.ActionJsonDeserializer());
+        objectMapperTyped.registerModule(module);
+
+        Batch original = new Batch("s1", 1, Collections.singletonList(new Event("test")));
+        System.out.println(objectMapper.writeValueAsString(original));
+        System.out.println(objectMapperTyped.writeValueAsString(original));
+    }
 
     @Test
     public void serializeEvent() throws Exception {

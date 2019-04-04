@@ -138,7 +138,7 @@ public class AppMetr {
      * @return {@code true} if the actions was added to this storage, else
      *         {@code false}
      */
-    protected synchronized boolean flush() throws InterruptedException {
+    public synchronized boolean flush() throws InterruptedException {
         log.trace("Flushing started for {} actions", actionList.size());
 
         if (actionList.isEmpty()) {
@@ -158,11 +158,11 @@ public class AppMetr {
         return stored;
     }
 
-    protected boolean needFlush() {
+    public boolean needFlush() {
         return actionsBytes >= maxBatchBytes || actionList.size() >= maxBatchActions || clock.instant().minus(flushPeriod).isAfter(lastFlushTime);
     }
 
-    protected void upload() {
+    private void upload() {
         log.trace("Upload starting");
 
         int uploadedBatchCounter = 0;

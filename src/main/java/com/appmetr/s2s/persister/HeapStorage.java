@@ -29,6 +29,7 @@ public class HeapStorage implements BatchStorage {
         }
 
         occupiedBytes += binaryBatch.getBytes().length;
+        previousBatchId = batchId;
         batchQueue.add(binaryBatch);
 
         return true;

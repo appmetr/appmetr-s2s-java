@@ -128,7 +128,6 @@ public class AppMetr {
 
         actionList.add(newAction);
         actionsBytes += newAction.calcApproximateSize();
-        lastFlushTime = clock.instant();
 
         return true;
     }
@@ -149,6 +148,7 @@ public class AppMetr {
         final boolean stored = batchStorage.store(actionList, (actions, batchId) -> batchFactory.createBatch(actions, batchId, serverId));
         if (stored) {
             log.debug("Flushing completed for {} actions", actionList.size());
+            lastFlushTime = clock.instant();
             actionList.clear();
             actionsBytes = 0;
         } else {
@@ -158,7 +158,13 @@ public class AppMetr {
         return stored;
     }
 
-    public boolean needFlush() {
+    public synchronized void flushIfNeeded() throws InterruptedException {
+        if (needFlush()) {
+            flush();
+        }
+    }
+
+    private boolean needFlush() {
         return actionsBytes >= maxBatchBytes || actionList.size() >= maxBatchActions || clock.instant().minus(flushPeriod).isAfter(lastFlushTime);
     }
 

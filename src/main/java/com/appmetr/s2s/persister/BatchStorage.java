@@ -1,5 +1,6 @@
 package com.appmetr.s2s.persister;
 
+import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.events.Action;
 
 import java.io.IOException;
@@ -25,7 +26,7 @@ public interface BatchStorage {
      * @return the head of this storage
      * @throws InterruptedException if interrupted while waiting
      */
-    byte[] peek() throws InterruptedException;
+    BinaryBatch peek() throws InterruptedException;
 
     /**
      * Removes the head of this storage.

@@ -9,35 +9,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
+import java.time.*;
 import java.util.ArrayList;
 import java.util.UUID;
 
 public class AppMetr {
     private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
 
-    public static final int DEFAULT_MAX_BATCH_ACTIONS = 1000;
-    public static final long DEFAULT_MAX_BATCH_BYTES = 1024 * 1024;
-    public static final Duration DEFAULT_FLUSH_PERIOD = Duration.ofMinutes(1);
-
     private String token;
     private String url;
     private boolean retryBatchUpload;
-    protected String serverId = UUID.randomUUID().toString();
+    private String serverId = UUID.randomUUID().toString();
     private Clock clock = Clock.systemUTC();
     private BatchStorage batchStorage = new HeapStorage();
     private HttpRequestService httpRequestService = new HttpRequestService();
     private BatchFactoryServerId batchFactory = new GzippedJsonBatchFactory();
 
-    private int maxBatchActions = DEFAULT_MAX_BATCH_ACTIONS;
-    private long maxBatchBytes = DEFAULT_MAX_BATCH_BYTES;
-    private Duration flushPeriod = DEFAULT_FLUSH_PERIOD;
+    private int maxBatchActions = 1000;
+    private long maxBatchBytes = 1024 * 1024;
+    private Duration flushPeriod = Duration.ofMinutes(1);
 
     private boolean stopped = true;
     private long actionsBytes;
-    private Instant lastUploadTime = Instant.MAX;
+    private Instant lastFlushTime = Instant.MAX;
     private ArrayList<Action> actionList = new ArrayList<>();
     private Thread uploadThread;
 
@@ -134,7 +128,7 @@ public class AppMetr {
 
         actionList.add(newAction);
         actionsBytes += newAction.calcApproximateSize();
-        lastUploadTime = clock.instant();
+        lastFlushTime = clock.instant();
 
         return true;
     }
@@ -165,51 +159,54 @@ public class AppMetr {
     }
 
     protected boolean needFlush() {
-        return actionsBytes >= maxBatchBytes || actionList.size() >= maxBatchActions;
+        return actionsBytes >= maxBatchBytes || actionList.size() >= maxBatchActions || clock.instant().minus(flushPeriod).isAfter(lastFlushTime);
     }
 
     protected void upload() {
-        log.debug("Upload starting");
+        log.trace("Upload starting");
 
-        Batch batch;
         int uploadedBatchCounter = 0;
         int allBatchCounter = 0;
         long sendBatchesBytes = 0;
-        while ((batch = batchStorage.getNext()) != null) {
+        while (true) {
+            final Instant batchReadStart = clock.instant();
+            final BinaryBatch binaryBatch;
+            try {
+                binaryBatch = batchStorage.peek();
+            } catch (InterruptedException e) {
+                log.debug("Upload has been interrupted");
+                Thread.currentThread().interrupt();
+                break;
+            }
+
             allBatchCounter++;
 
+            log.trace("Batch {} read time: {} ms", binaryBatch.getBatchId(), Duration.between(batchReadStart, clock.instant()));
+
+            final Instant batchUploadStart = clock.instant();
             boolean result;
-            final long batchReadStart = System.currentTimeMillis();
-            final byte[] batchBytes = SerializationUtils.serializeJsonGzip(batch, false);
-            final long batchReadEnd = System.currentTimeMillis();
-
-            log.trace("Batch {} read time: {} ms", batch.getBatchId(), batchReadEnd - batchReadStart);
-
-            final long batchUploadStart = System.currentTimeMillis();
             try {
-                result = httpRequestService.sendRequest(url, token, batchBytes);
+                result = httpRequestService.sendRequest(url, token, binaryBatch.getBytes());
             } catch (IOException e) {
                 log.error("IOException while sending request", e);
                 result = false;
             }
-            final long batchUploadEnd = System.currentTimeMillis();
 
-            log.debug("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
+            log.debug("Batch {} {} finished. Took {} ms", binaryBatch.getBatchId(), result ? "" : "NOT", Duration.between(batchUploadStart, clock.instant()));
 
             if (result) {
-                log.trace("Batch {} successfully uploaded", batch.getBatchId());
+                log.trace("Batch {} successfully uploaded", binaryBatch.getBatchId());
                 batchStorage.remove();
                 uploadedBatchCounter++;
-                sendBatchesBytes += batchBytes.length;
+                sendBatchesBytes += binaryBatch.getBytes().length;
             } else {
-                log.error("Error while upload batch {}. Took {} ms", batch.getBatchId(), batchUploadEnd - batchUploadStart);
-                if (retryBatchUpload) {
-                    break;
+                log.error("Error while upload batch {}", binaryBatch.getBatchId());
+                if (!retryBatchUpload) {
+                    batchStorage.remove();
                 }
-                batchStorage.remove();
             }
         }
 
-        log.debug("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
+        log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
     }
 }

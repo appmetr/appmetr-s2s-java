@@ -1,5 +1,6 @@
 package com.appmetr.s2s.persister;
 
+import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.events.Action;
 
 import java.util.Collection;
@@ -10,8 +11,8 @@ public class HeapBlockingStorage implements BatchStorage {
         return false;
     }
 
-    @Override public byte[] peek() throws InterruptedException {
-        return new byte[0];
+    @Override public BinaryBatch peek() throws InterruptedException {
+        return null;
     }
 
     @Override public void remove() {

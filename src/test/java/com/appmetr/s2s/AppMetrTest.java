@@ -1,12 +1,9 @@
 package com.appmetr.s2s;
 
-import com.appmetr.s2s.events.Event;
-import com.appmetr.s2s.persister.FileBatchPersister;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Random;
 
 public class AppMetrTest {
@@ -17,38 +14,38 @@ public class AppMetrTest {
 
     @Test
     public void testFilePersister() {
-        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
-        for (int i = 0; i < 10001; i++) {
-            HashMap<String, Object> properties = new HashMap<String, Object>();
-
-            for (int j = 0; j < 25; j++) {
-                properties.put(String.valueOf(j), getRandomObject());
-            }
-            appMetr.track(new Event("event#" + i % 100).setProperties(properties));
-        }
-        appMetr.stop();
+//        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
+//        for (int i = 0; i < 10001; i++) {
+//            HashMap<String, Object> properties = new HashMap<String, Object>();
+//
+//            for (int j = 0; j < 25; j++) {
+//                properties.put(String.valueOf(j), getRandomObject());
+//            }
+//            appMetr.track(new Event("event#" + i % 100).setProperties(properties));
+//        }
+//        appMetr.stop();
     }
 
     @Ignore
     @Test
     public void testHangUp() throws Exception {
-        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
-
-        Thread.sleep(600000);
+//        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
+//
+//        Thread.sleep(600000);
     }
 
     @Test
     public void testMemoryPersister() {
-        AppMetr appMetr = new AppMetr(token, url);
-        for (int i = 0; i < 500; i++) {
-            HashMap<String, Object> properties = new HashMap<String, Object>();
-
-            for (int j = 0; j < 5; j++) {
-                properties.put(String.valueOf(j), getRandomObject());
-            }
-            appMetr.track(new Event("event#" + i).setProperties(properties));
-        }
-        appMetr.stop();
+//        AppMetr appMetr = new AppMetr(token, url);
+//        for (int i = 0; i < 500; i++) {
+//            HashMap<String, Object> properties = new HashMap<String, Object>();
+//
+//            for (int j = 0; j < 5; j++) {
+//                properties.put(String.valueOf(j), getRandomObject());
+//            }
+//            appMetr.track(new Event("event#" + i).setProperties(properties));
+//        }
+//        appMetr.stop();
     }
 
     private static Object getRandomObject() {

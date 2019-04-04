@@ -18,10 +18,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class FileBatchPersister implements BatchPersister {
     private final static Logger log = LoggerFactory.getLogger(FileBatchPersister.class);
 
-    public static final int BYTES_IN_MB = 1024 * 1024;
-    public static final int REBATCH_THRESHOLD_ITEM_COUNT = 1000;
-    public static final int REBATCH_THRESHOLD_FILE_SIZE = 1 * BYTES_IN_MB;
-
     protected final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     protected Queue<Long> fileIds;

@@ -5,7 +5,7 @@ import com.appmetr.s2s.events.Action;
 import java.util.Collection;
 
 @FunctionalInterface
-public interface BatchFactory {
+public interface BatchFactoryServerId {
 
-    byte[] createBatch(Collection<Action> actions, long batchId);
+    byte[] createBatch(Collection<Action> actions, long batchId, String serverId);
 }

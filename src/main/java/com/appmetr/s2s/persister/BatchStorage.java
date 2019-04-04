@@ -1,24 +1,22 @@
 package com.appmetr.s2s.persister;
 
-public interface BatchStorage {
+import com.appmetr.s2s.events.Action;
 
-    /**
-     * Inserts the specified element into this storage, waiting if necessary
-     * for space to become available.
-     *
-     * @throws InterruptedException if interrupted while waiting
-     */
-    void put(byte[] batch) throws InterruptedException;
+import java.io.IOException;
+import java.util.Collection;
+
+public interface BatchStorage {
 
     /**
      * Inserts the specified element into this storage if it is possible to do
      * so immediately without violating capacity restrictions, returning
      * {@code true} upon success and {@code false} if no space is currently
      * available.
+     * Can blocks until space become available.
      * @return {@code true} if the element was added to this storage, else
      *         {@code false}
      */
-    boolean offer(byte[] batch);
+    boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException;
 
     /**
      * Retrieves, but does not remove, the head of this storage, waiting if necessary
@@ -32,5 +30,7 @@ public interface BatchStorage {
     /**
      * Removes the head of this storage.
      */
-     void remove();
+    void remove();
+
+    default void init() throws IOException {}
 }

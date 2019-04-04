@@ -64,7 +64,7 @@ public abstract class Action {
     }
 
     protected int getStringLength(String str) {
-        return str == null ? 0 : str.length() * 2 + 24 + 16;    //24 - String object size, 16 - char[]
+        return str == null ? 0 : str.length() * Character.BYTES + 24 + 16;    //24 - String object size, 16 - char[]
     }
 
     @Override public boolean equals(Object o) {

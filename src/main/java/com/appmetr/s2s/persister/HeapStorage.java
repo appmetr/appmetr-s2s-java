@@ -4,13 +4,15 @@ import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.events.Action;
 
 import java.time.Clock;
+import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class HeapStorage implements BatchStorage {
 
-    protected BlockingQueue<BinaryBatch> batchQueue = new LinkedBlockingQueue<>();
+    protected Queue<BinaryBatch> batchQueue = new ArrayDeque<>();
     protected Clock clock = Clock.systemUTC();
     protected long maxBytes = -1;
 
@@ -32,14 +34,25 @@ public class HeapStorage implements BatchStorage {
         previousBatchId = batchId;
         batchQueue.add(binaryBatch);
 
+        notify();
+
         return true;
     }
 
-    @Override public BinaryBatch peek() {
-        return batchQueue.peek();
+    @Override public synchronized BinaryBatch peek() throws InterruptedException {
+        while (true) {
+            final BinaryBatch binaryBatch = batchQueue.peek();
+            if (binaryBatch != null) {
+                return binaryBatch;
+            }
+            wait();
+        }
     }
 
-    @Override public void remove() {
-
+    @Override public synchronized void remove() {
+        final BinaryBatch binaryBatch = batchQueue.poll();
+        if (binaryBatch != null) {
+            occupiedBytes -= binaryBatch.getBytes().length;
+        }
     }
 }

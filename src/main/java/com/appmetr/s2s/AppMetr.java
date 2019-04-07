@@ -16,8 +16,8 @@ import java.util.UUID;
 public class AppMetr {
     private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
 
-    private final String token;
-    private final String url;
+    private String token;
+    private String url;
     private boolean retryBatchUpload;
     private String serverId = UUID.randomUUID().toString();
     private Clock clock = Clock.systemUTC();
@@ -35,8 +35,19 @@ public class AppMetr {
     private ArrayList<Action> actionList = new ArrayList<>();
     private Thread uploadThread;
 
+    public AppMetr() {
+    }
+
     public AppMetr(String token, String url) {
         this.token = token;
+        this.url = url;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public void setUrl(String url) {
         this.url = url;
     }
 

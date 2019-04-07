@@ -25,7 +25,7 @@ public class FileBatchPersister implements BatchPersister {
     protected Path path;
     protected long lastBatchId;
 
-    protected final Path batchIdFileSaver;
+    protected final Path batchIdFile;
     protected final String BATCH_FILE_NAME = "batchFile#";
     protected final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE_NAME + "*";
     protected final String DIGITAL_FORMAT = "%011d";
@@ -46,7 +46,7 @@ public class FileBatchPersister implements BatchPersister {
             path = path.getParent();
         }
 
-        batchIdFileSaver = path.toAbsolutePath().resolve("lastBatchId");
+        batchIdFile = path.toAbsolutePath().resolve("lastBatchId");
 
         initPersistedFiles();
     }
@@ -55,9 +55,9 @@ public class FileBatchPersister implements BatchPersister {
         lastBatchId++;
 
         try {
-            Files.write(batchIdFileSaver, Collections.singleton(String.valueOf(lastBatchId)), StandardCharsets.UTF_8);
+            Files.write(batchIdFile, Collections.singleton(String.valueOf(lastBatchId)), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            log.error("(updateLastBatchId) Exception while write to batchIdFileSaver file:", e);
+            log.error("(updateLastBatchId) Exception while write to batchIdFile file:", e);
         }
     }
 
@@ -75,17 +75,17 @@ public class FileBatchPersister implements BatchPersister {
 
         long batchIdFileLength = 0;
         try {
-            batchIdFileLength = Files.exists(batchIdFileSaver) ? Files.size(batchIdFileSaver) : 0;
+            batchIdFileLength = Files.exists(batchIdFile) ? Files.size(batchIdFile) : 0;
         } catch (IOException e) {
             log.error("", e);
         }
 
         if (batchIdFileLength > 0) {
             try {
-                final List<String> lines = Files.readAllLines(batchIdFileSaver, StandardCharsets.UTF_8);
+                final List<String> lines = Files.readAllLines(batchIdFile, StandardCharsets.UTF_8);
                 lastBatchId = Integer.parseInt(lines.get(0));
             } catch (IOException e) {
-                log.error("Exception while reading from batchIdFileSaver: ", e);
+                log.error("Exception while reading from batchIdFile: ", e);
             }
         } else if (ids.size() > 0) {
             lastBatchId = ids.get(ids.size() - 1);

@@ -19,7 +19,7 @@ public interface BatchStorage {
      *         {@code false}
      * @throws InterruptedException if interrupted while waiting
      */
-    boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException;
+    boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException, IOException;
 
     /**
      * Retrieves, but does not remove, the head of this storage, waiting if necessary
@@ -28,12 +28,10 @@ public interface BatchStorage {
      * @return the head of this storage
      * @throws InterruptedException if interrupted while waiting
      */
-    BinaryBatch peek() throws InterruptedException;
+    BinaryBatch peek() throws InterruptedException, IOException;
 
     /**
      * Removes the head of this storage.
      */
-    void remove();
-
-    default void init() throws IOException {}
+    void remove() throws IOException;
 }

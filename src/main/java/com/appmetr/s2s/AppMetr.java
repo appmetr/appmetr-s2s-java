@@ -4,7 +4,7 @@ import com.appmetr.s2s.events.Action;
 import com.appmetr.s2s.persister.BatchFactoryServerId;
 import com.appmetr.s2s.persister.BatchStorage;
 import com.appmetr.s2s.persister.GzippedJsonBatchFactory;
-import com.appmetr.s2s.persister.HeapStorage;
+import com.appmetr.s2s.persister.NonBlockingHeapStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +21,7 @@ public class AppMetr {
     private boolean retryBatchUpload;
     private String serverId = UUID.randomUUID().toString();
     private Clock clock = Clock.systemUTC();
-    private BatchStorage batchStorage = new HeapStorage();
+    private BatchStorage batchStorage = new NonBlockingHeapStorage();
     private HttpRequestService httpRequestService = new HttpRequestService();
     private BatchFactoryServerId batchFactory = new GzippedJsonBatchFactory();
 

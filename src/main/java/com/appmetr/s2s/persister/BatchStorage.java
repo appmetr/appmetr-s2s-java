@@ -14,8 +14,10 @@ public interface BatchStorage {
      * {@code true} upon success and {@code false} if no space is currently
      * available.
      * Can blocks until space become available.
+     *
      * @return {@code true} if the element was added to this storage, else
      *         {@code false}
+     * @throws InterruptedException if interrupted while waiting
      */
     boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException;
 

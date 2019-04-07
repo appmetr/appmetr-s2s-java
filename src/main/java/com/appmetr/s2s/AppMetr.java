@@ -177,8 +177,6 @@ public class AppMetr {
             try {
                 binaryBatch = batchStorage.peek();
             } catch (InterruptedException e) {
-                log.debug("Upload has been interrupted");
-                Thread.currentThread().interrupt();
                 break;
             }
 
@@ -208,8 +206,13 @@ public class AppMetr {
                     batchStorage.remove();
                 }
             }
+
+            if (Thread.interrupted()) {
+                break;
+            }
         }
 
         log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
+        Thread.currentThread().interrupt();
     }
 }

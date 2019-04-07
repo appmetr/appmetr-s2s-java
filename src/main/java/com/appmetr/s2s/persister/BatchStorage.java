@@ -33,5 +33,5 @@ public interface BatchStorage {
     /**
      * Removes the head of this storage.
      */
-    void remove();
+    void remove() throws IOException;
 }

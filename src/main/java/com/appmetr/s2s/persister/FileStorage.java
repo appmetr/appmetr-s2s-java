@@ -77,15 +77,13 @@ public class FileStorage implements BatchStorage {
         }
     }
 
-    @Override public void remove() {
+    @Override public void remove() throws IOException {
         lock.writeLock().lock();
         final Path batchFile = getBatchFile(fileIds.poll());
         try {
             if (batchFile != null) {
                 Files.delete(batchFile);
             }
-        } catch (IOException e) {
-            log.warn("Cannot delete the file {}", batchFile, e);
         } finally {
             lock.writeLock().unlock();
         }

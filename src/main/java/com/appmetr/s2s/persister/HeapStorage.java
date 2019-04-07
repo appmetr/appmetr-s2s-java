@@ -1,12 +1,18 @@
 package com.appmetr.s2s.persister;
 
 import com.appmetr.s2s.BinaryBatch;
+import com.appmetr.s2s.events.Action;
 
-public class HeapStorage extends NonBlockingHeapStorage {
+import java.util.Collection;
 
-    @Override public synchronized void remove() {
-        super.remove();
-        notifyAll();
+public class HeapStorage extends AbstractHeapStorage {
+
+    /**
+     * Store operation is always successful but can block until space become available
+     * @return always true
+     */
+    @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException {
+        return super.store(actions, batchFactory);
     }
 
     @Override protected boolean isCapacityExceeded(BinaryBatch binaryBatch) throws InterruptedException {
@@ -17,5 +23,10 @@ public class HeapStorage extends NonBlockingHeapStorage {
             }
             wait();
         }
+    }
+
+    @Override public synchronized void remove() {
+        super.remove();
+        notifyAll();
     }
 }

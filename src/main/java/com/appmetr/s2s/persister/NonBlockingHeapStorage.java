@@ -10,57 +10,16 @@ import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class NonBlockingHeapStorage implements BatchStorage {
-
-    protected Queue<BinaryBatch> batchQueue = new ArrayDeque<>();
-    protected Clock clock = Clock.systemUTC();
-    protected long maxBytes = -1;
-
-    protected long previousBatchId;
-    protected long occupiedBytes;
+public class NonBlockingHeapStorage extends AbstractHeapStorage {
 
     /**
      * Never blocks
-     * @throws InterruptedException will be never throws
      */
-    @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException {
-        long batchId = clock.millis();
-        if (batchId <= previousBatchId) {
-            batchId = previousBatchId + 1;
+    @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) {
+        try {
+            return super.store(actions, batchFactory);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("It is imposable to be interrupted here");
         }
-
-        final BinaryBatch binaryBatch = batchFactory.createBatch(actions, batchId);
-        if (isCapacityExceeded(binaryBatch)) {
-            return false;
-        }
-
-        occupiedBytes += binaryBatch.getBytes().length;
-        previousBatchId = batchId;
-        batchQueue.add(binaryBatch);
-
-        notify();
-
-        return true;
-    }
-
-    @Override public synchronized BinaryBatch peek() throws InterruptedException {
-        while (true) {
-            final BinaryBatch binaryBatch = batchQueue.peek();
-            if (binaryBatch != null) {
-                return binaryBatch;
-            }
-            wait();
-        }
-    }
-
-    @Override public synchronized void remove() {
-        final BinaryBatch binaryBatch = batchQueue.poll();
-        if (binaryBatch != null) {
-            occupiedBytes -= binaryBatch.getBytes().length;
-        }
-    }
-
-    protected boolean isCapacityExceeded(BinaryBatch binaryBatch) throws InterruptedException {
-        return occupiedBytes + binaryBatch.getBytes().length > maxBytes;
     }
 }

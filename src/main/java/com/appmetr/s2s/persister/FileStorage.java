@@ -62,10 +62,13 @@ public class FileStorage implements BatchStorage {
                     return null;
                 }
 
-                final byte[] bytes = getBatchFromFile(getBatchFile(batchId));
+                final Path batchFile = getBatchFile(batchId);
+                final byte[] bytes = getBatchFromFile(batchFile);
                 if (bytes != null) {
                     return new BinaryBatch(batchId, bytes);
                 }
+
+                log.warn("Batch file {} is missing or empty", batchFile);
 
                 fileIds.remove();
             }
@@ -74,13 +77,15 @@ public class FileStorage implements BatchStorage {
         }
     }
 
-    @Override public void remove() throws IOException {
+    @Override public void remove() {
         lock.writeLock().lock();
+        final Path batchFile = getBatchFile(fileIds.poll());
         try {
-            final Path batchFile = getBatchFile(fileIds.poll());
             if (batchFile != null) {
                 Files.delete(batchFile);
             }
+        } catch (IOException e) {
+            log.warn("Cannot delete the file {}", batchFile, e);
         } finally {
             lock.writeLock().unlock();
         }

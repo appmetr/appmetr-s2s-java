@@ -1,8 +1,6 @@
 package com.appmetr.s2s.persister;
 
-import com.appmetr.s2s.Batch;
 import com.appmetr.s2s.BinaryBatch;
-import com.appmetr.s2s.SerializationUtils;
 import com.appmetr.s2s.events.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +17,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class FileStorage implements BatchStorage {
     private final static Logger log = LoggerFactory.getLogger(FileStorage.class);
 
-    protected static final String BATCH_FILE_NAME = "batchFile#";
-    protected static final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE_NAME + "*";
+    protected static final String BATCH_FILE = "batchFile";
+    protected static final String BATCH_FILE_NAME_PREFIX = BATCH_FILE + "-";
+    protected static final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE + "*";
     protected static final String DIGITAL_FORMAT = "%011d";
 
     protected final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -39,7 +38,7 @@ public class FileStorage implements BatchStorage {
         lock.writeLock().lock();
         try {
             final BinaryBatch binaryBatch = batchFactory.createBatch(actions, lastBatchId);
-            final Path file = getBatchFile(lastBatchId);
+            final Path file = batchFilePath(lastBatchId);
 
             Files.write(file, binaryBatch.getBytes());
 
@@ -52,7 +51,7 @@ public class FileStorage implements BatchStorage {
         return true;
     }
 
-    @Override public BinaryBatch peek() throws InterruptedException, IOException {
+    @Override public BinaryBatch peek() throws IOException {
         lock.readLock().lock();
         try {
             while (true) {
@@ -62,7 +61,7 @@ public class FileStorage implements BatchStorage {
                     return null;
                 }
 
-                final Path batchFile = getBatchFile(batchId);
+                final Path batchFile = batchFilePath(batchId);
                 final byte[] bytes = getBatchFromFile(batchFile);
                 if (bytes != null) {
                     return new BinaryBatch(batchId, bytes);
@@ -79,7 +78,7 @@ public class FileStorage implements BatchStorage {
 
     @Override public void remove() throws IOException {
         lock.writeLock().lock();
-        final Path batchFile = getBatchFile(fileIds.poll());
+        final Path batchFile = batchFilePath(fileIds.poll());
         try {
             if (batchFile != null) {
                 Files.delete(batchFile);
@@ -93,7 +92,7 @@ public class FileStorage implements BatchStorage {
         final List<Long> ids = new ArrayList<>();
         try (final DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, BATCH_FILE_GLOB_PATTERN)) {
             for (Path file : directoryStream) {
-                ids.add(getFileId(file.getFileName().toString()));
+                ids.add(batchId(file.getFileName().toString()));
             }
         }
         Collections.sort(ids);
@@ -115,13 +114,16 @@ public class FileStorage implements BatchStorage {
         log.debug("Initialized {} batches.", ids.size());
     }
 
-
-    protected Path getBatchFile(Long fileId) {
-        return fileId == null ? null : path.toAbsolutePath().resolve(BATCH_FILE_NAME + String.format(DIGITAL_FORMAT, fileId));
+    private Path batchFilePath(Long fileId) {
+        return batchFilePath(fileId, BATCH_FILE_NAME_PREFIX);
     }
 
-    protected long getFileId(String batchFileName) {
-        return Long.parseLong(batchFileName.substring(BATCH_FILE_NAME.length()));
+    protected Path batchFilePath(Long fileId, String namePrefix) {
+        return fileId == null ? null : path.toAbsolutePath().resolve(namePrefix + String.format(DIGITAL_FORMAT, fileId));
+    }
+
+    protected long batchId(String batchFileName) {
+        return Long.parseLong(batchFileName.substring(BATCH_FILE_NAME_PREFIX.length()));
     }
 
     protected void updateLastBatchId() throws IOException {

@@ -28,6 +28,8 @@ public class AppMetr {
     private int maxBatchActions = 1000;
     private long maxBatchBytes = 1024 * 1024;
     private Duration flushPeriod = Duration.ofMinutes(1);
+    private Duration readRetryTimeout = Duration.ofSeconds(3);
+    private Duration uploadRetryTimeout = Duration.ofSeconds(1);
 
     private boolean stopped = true;
     private long actionsBytes;
@@ -91,6 +93,18 @@ public class AppMetr {
         return actionsBytes;
     }
 
+    public void setFlushPeriod(Duration flushPeriod) {
+        this.flushPeriod = flushPeriod;
+    }
+
+    public void setReadRetryTimeout(Duration readRetryTimeout) {
+        this.readRetryTimeout = readRetryTimeout;
+    }
+
+    public void setUploadRetryTimeout(Duration uploadRetryTimeout) {
+        this.uploadRetryTimeout = uploadRetryTimeout;
+    }
+
     public synchronized void start() {
         uploadThread = new Thread(this::upload, "appmetr-upload-" + token);
         uploadThread.setUncaughtExceptionHandler((t, e) -> log.error("Uncaught upload exception", e));
@@ -116,6 +130,8 @@ public class AppMetr {
         } catch (InterruptedException e) {
             log.error("AppMetr stopping was interrupted", e);
             Thread.currentThread().interrupt();
+        } catch (IOException e) {
+            log.error("Exception while stopping", e);
         }
     }
 
@@ -123,7 +139,7 @@ public class AppMetr {
      * Can blocks until a storage space become available regardless BatchStorage implementation
      * @return {@code true} if an Action has been tracked successfully or {@code false} if no space is currently available.
      */
-    public synchronized boolean track(Action newAction) throws InterruptedException {
+    public synchronized boolean track(Action newAction) throws InterruptedException, IOException {
         if (stopped) {
             throw new IllegalStateException("Cannot track because stopped");
         }
@@ -145,7 +161,7 @@ public class AppMetr {
      * @return {@code true} if the actions was added to this storage, else
      *         {@code false}
      */
-    public synchronized boolean flush() throws InterruptedException {
+    public synchronized boolean flush() throws InterruptedException, IOException {
         log.trace("Flushing started for {} actions", actionList.size());
 
         if (actionList.isEmpty()) {
@@ -166,7 +182,7 @@ public class AppMetr {
         return stored;
     }
 
-    public synchronized void flushIfNeeded() throws InterruptedException {
+    public synchronized void flushIfNeeded() throws InterruptedException, IOException {
         if (needFlush()) {
             flush();
         }
@@ -189,33 +205,55 @@ public class AppMetr {
                 binaryBatch = batchStorage.peek();
             } catch (InterruptedException e) {
                 break;
+            } catch (IOException e) {
+                log.error("Error while reading batch", e);
+                try {
+                    Thread.sleep(readRetryTimeout.toMillis());
+                    continue;
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
 
             allBatchCounter++;
 
             log.trace("Batch {} read time: {} ms", binaryBatch.getBatchId(), Duration.between(batchReadStart, clock.instant()));
 
-            final Instant batchUploadStart = clock.instant();
-            boolean result;
-            try {
-                result = httpRequestService.sendRequest(url, token, binaryBatch.getBytes());
-            } catch (IOException e) {
-                log.error("IOException while sending request", e);
-                result = false;
-            }
-
-            log.debug("Batch {} {} finished. Took {} ms", binaryBatch.getBatchId(), result ? "" : "NOT", Duration.between(batchUploadStart, clock.instant()));
-
-            if (result) {
-                log.trace("Batch {} successfully uploaded", binaryBatch.getBatchId());
-                batchStorage.remove();
-                uploadedBatchCounter++;
-                sendBatchesBytes += binaryBatch.getBytes().length;
-            } else {
-                log.error("Error while upload batch {}", binaryBatch.getBatchId());
-                if (!retryBatchUpload) {
-                    batchStorage.remove();
+            while (true) {
+                final Instant batchUploadStart = clock.instant();
+                boolean result;
+                try {
+                    result = httpRequestService.sendRequest(url, token, binaryBatch.getBytes());
+                } catch (IOException e) {
+                    log.warn("Exception while sending the batch {}", binaryBatch.getBatchId(), e);
+                    result = false;
                 }
+
+                log.debug("Batch {} {} finished. Took {} ms", binaryBatch.getBatchId(), result ? "" : "NOT", Duration.between(batchUploadStart, clock.instant()));
+
+                if (result) {
+                    log.trace("Batch {} successfully uploaded", binaryBatch.getBatchId());
+                    tryRemove(binaryBatch.getBatchId());
+                    uploadedBatchCounter++;
+                    sendBatchesBytes += binaryBatch.getBytes().length;
+                    break;
+                }
+
+                log.error("Error while uploading batch {}", binaryBatch.getBatchId());
+                if (!retryBatchUpload) {
+                    tryRemove(binaryBatch.getBatchId());
+                    break;
+                }
+
+                try {
+                    Thread.sleep(uploadRetryTimeout.toMillis());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+
+                log.info("Retrying the batch {}", binaryBatch.getBatchId());
             }
 
             if (Thread.interrupted()) {
@@ -225,5 +263,13 @@ public class AppMetr {
 
         log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
         Thread.currentThread().interrupt();
+    }
+
+    private void tryRemove(long batchId) {
+        try {
+            batchStorage.remove();
+        } catch (IOException e) {
+            log.error("Error while removing uploaded batch {}", batchId);
+        }
     }
 }

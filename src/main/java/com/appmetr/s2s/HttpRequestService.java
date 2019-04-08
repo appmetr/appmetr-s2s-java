@@ -83,11 +83,7 @@ public class HttpRequestService {
             } catch (Exception jsonError) {
                 log.error("Json exception", jsonError);
             }
-        }
-        catch (SocketTimeoutException timeoutException){
-            log.error("Socket timeout", timeoutException);
-        }
-        catch (Exception error) {
+        } catch (Exception error) {
             log.error("Server error", error);
         } finally {
             connection.disconnect();

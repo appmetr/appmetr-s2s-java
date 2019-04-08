@@ -1,7 +1,8 @@
 package com.appmetr.s2s;
 
-import org.junit.Ignore;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -26,7 +27,7 @@ public class AppMetrTest {
 //        appMetr.stop();
     }
 
-    @Ignore
+    @Disabled
     @Test
     public void testHangUp() throws Exception {
 //        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));

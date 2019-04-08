@@ -23,7 +23,7 @@ public class AppMetr {
     private Clock clock = Clock.systemUTC();
     private BatchStorage batchStorage = new NonBlockingHeapStorage();
     private HttpRequestService httpRequestService = new HttpRequestService();
-    private BatchFactoryServerId batchFactory = new GzippedJsonBatchFactory();
+    private BatchFactoryServerId batchFactory = GzippedJsonBatchFactory.instance;
 
     private int maxBatchActions = 1000;
     private long maxBatchBytes = 1024 * 1024;

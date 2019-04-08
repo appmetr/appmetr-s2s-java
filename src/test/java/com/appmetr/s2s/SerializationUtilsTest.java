@@ -3,7 +3,7 @@ package com.appmetr.s2s;
 import com.appmetr.s2s.events.Event;
 import com.appmetr.s2s.events.Level;
 import com.appmetr.s2s.events.Payment;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -13,12 +13,14 @@ import java.util.zip.InflaterOutputStream;
 
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class SerializationUtilsTest {
+
+class SerializationUtilsTest {
 
     @Test
-    public void serializeEvent_() throws Exception {
+    void serializeEvent_() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         ObjectMapper objectMapperTyped = objectMapper.copy();
@@ -33,7 +35,7 @@ public class SerializationUtilsTest {
     }
 
     @Test
-    public void serializeEvent() throws Exception {
+    void serializeEvent() throws Exception {
         Batch original = new Batch("s1", 1, singletonList(new Event("test")));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
@@ -42,7 +44,7 @@ public class SerializationUtilsTest {
     }
 
     @Test()
-    public void serializeLevel() throws Exception {
+    void serializeLevel() throws Exception {
         Batch original = new Batch("s1", 2, singletonList(new Level(2)));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
@@ -51,7 +53,7 @@ public class SerializationUtilsTest {
     }
 
     @Test()
-    public void serializePayment() throws Exception {
+    void serializePayment() throws Exception {
         Batch original = new Batch("s1", 2, singletonList(
                 new Payment("order1", "trans1", "proc1", "USD", "123", null, null, null, true)));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
@@ -76,10 +78,10 @@ public class SerializationUtilsTest {
 
     }
 
-    @Test(expected = RuntimeException.class)
-    public void serializeWithoutTypeInfo() throws Exception {
+    @Test
+    void serializeWithoutTypeInfo() throws Exception {
         byte[] bytes = SerializationUtils.serializeJsonGzip(new Batch("s2", 9, singletonList(new Event("test"))), false);
-        SerializationUtils.deserializeJsonGzip(bytes);
+        assertThrows(RuntimeException.class, () -> SerializationUtils.deserializeJsonGzip(bytes));
     }
 
     @Test()
@@ -98,7 +100,7 @@ public class SerializationUtilsTest {
     }
 
     @Test
-    public void serializeWithoutOriginalTime() throws Exception {
+    void serializeWithoutOriginalTime() throws Exception {
         Batch original = new Batch("s1", 2, singletonList(new Event("test")));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
 
@@ -108,6 +110,23 @@ public class SerializationUtilsTest {
         assertNull(batchNode.get(0).get("$userTime"));
     }
 
+    @Test
+    void serializeLevel_Gson() throws Exception {
+        Batch original = new Batch("s1", 2, Collections.singletonList(new Level(2)));
+        byte[] bytes = SerializationUtilsGson.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
+    }
+
+    @Test
+    void serializePayment_Gson() throws Exception {
+        Batch original = new Batch("s1", 2, Collections.singletonList(
+                new Payment("order1", "trans1", "proc1", "USD", "123")));
+        byte[] bytes = SerializationUtilsGson.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+        System.out.println(deserialized);
+        assertEquals(original, deserialized);
     public static JsonNode decompress(byte[] compressedBody) throws IOException {
         ByteArrayOutputStream inflatedByteStream = new ByteArrayOutputStream();
         Inflater inflater = new Inflater(true);

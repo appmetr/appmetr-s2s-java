@@ -3,6 +3,7 @@ package com.appmetr.s2s;
 import com.appmetr.s2s.events.Action;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -14,7 +15,7 @@ public class Batch {
     private Batch() {
     }
 
-    public Batch(String serverId, long batchId, List<Action> actionList) {
+    public Batch(String serverId, long batchId, Collection<Action> actionList) {
         this.serverId = serverId;
         this.batchId = batchId;
         batch = new ArrayList<>(actionList);

@@ -32,7 +32,7 @@ class NonBlockingHeapStorageTest {
                 final BinaryBatch binaryBatch = nonBlockingHeapStorage.peek();
                 assertEquals(1, binaryBatch.getBatchId());
                 nonBlockingHeapStorage.remove();
-            } catch (InterruptedException e) {
+            } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
         });
@@ -55,7 +55,7 @@ class NonBlockingHeapStorageTest {
                 final BinaryBatch binaryBatch = nonBlockingHeapStorage.peek();
                 assertEquals(1, binaryBatch.getBatchId());
                 nonBlockingHeapStorage.remove();
-            } catch (InterruptedException e) {
+            } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
         });

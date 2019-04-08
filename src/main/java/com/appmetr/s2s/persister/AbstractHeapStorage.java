@@ -12,10 +12,18 @@ public class AbstractHeapStorage implements BatchStorage {
 
     protected Queue<BinaryBatch> batchQueue = new ArrayDeque<>();
     protected Clock clock = Clock.systemUTC();
-    protected long maxBytes = -1;
+    protected long maxBytes;
 
     protected long previousBatchId;
     protected long occupiedBytes;
+
+    public void setClock(Clock clock) {
+        this.clock = clock;
+    }
+
+    public void setMaxBytes(long maxBytes) {
+        this.maxBytes = maxBytes;
+    }
 
     @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException {
         long batchId = clock.millis();
@@ -55,6 +63,6 @@ public class AbstractHeapStorage implements BatchStorage {
     }
 
     protected boolean isCapacityExceeded(BinaryBatch binaryBatch) throws InterruptedException {
-        return occupiedBytes + binaryBatch.getBytes().length > maxBytes;
+        return maxBytes > 0 && occupiedBytes + binaryBatch.getBytes().length > maxBytes;
     }
 }

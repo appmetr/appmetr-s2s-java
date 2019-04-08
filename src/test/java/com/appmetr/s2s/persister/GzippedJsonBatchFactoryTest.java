@@ -30,7 +30,6 @@ public class GzippedJsonBatchFactoryTest {
                 new Level(2).setProperties(Collections.singletonMap("a", 5)),
                 new Payment("order1", "trans1", "proc1", "USD", "123")), 1, "s1");
         final String decompressed = decompress(batch.getBytes());
-        System.out.println(decompressed);
 
         final JsonNode jsonNode = jackson.readTree(decompressed);
         assertEquals(1, jsonNode.get("batchId").asLong());

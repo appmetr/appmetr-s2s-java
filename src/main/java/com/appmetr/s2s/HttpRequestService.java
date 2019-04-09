@@ -9,6 +9,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
@@ -129,7 +130,7 @@ public class HttpRequestService {
 
     protected String readResponse(InputStream inputStream) throws IOException {
         final StringBuilder result = new StringBuilder();
-        try (BufferedReader input = new BufferedReader(new InputStreamReader(inputStream))) {
+        try (BufferedReader input = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String inputLine;
             while ((inputLine = input.readLine()) != null) {
                 result.append(inputLine);

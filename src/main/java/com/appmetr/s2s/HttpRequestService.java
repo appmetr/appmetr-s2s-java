@@ -18,13 +18,14 @@ import java.util.Map;
 public class HttpRequestService {
     private static final Logger log = LoggerFactory.getLogger(HttpRequestService.class);
 
+    protected static final ThreadLocal<byte[]> bytesThreadLocal = ThreadLocal.withInitial(() -> new byte[1024]);
+
     protected int connectTimeoutMs = 60 * 1000;
     protected int readTimeoutMs = 120 * 1000;
     protected ObjectMapper objectMapper = new ObjectMapper();
     protected String serverMethodName = "server.trackS2S";
     protected Clock clock = Clock.systemUTC();
 
-    protected final ThreadLocal<byte[]> bytesThreadLocal = ThreadLocal.withInitial(() -> new byte[1024]);
 
     public void setConnectTimeoutMs(int connectTimeoutMs) {
         this.connectTimeoutMs = connectTimeoutMs;

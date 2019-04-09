@@ -24,9 +24,6 @@ public class FileStorage implements BatchStorage {
     protected static final String DIGITAL_FORMAT = "%011d";
     protected static final String LAST_BATCH_ID_FILE_NAME = "lastBatchId";
 
-    protected final ReadWriteLock lock = new ReentrantReadWriteLock();
-    protected final Condition storeCondition = lock.writeLock().newCondition();
-
     protected Queue<Long> fileIds;
     protected Path path;
     protected long lastBatchId;
@@ -37,59 +34,44 @@ public class FileStorage implements BatchStorage {
         init();
     }
 
-    @Override public boolean store(Collection<Action> actions, BatchFactory batchFactory) throws IOException {
-        lock.writeLock().lock();
-        try {
-            final BinaryBatch binaryBatch = batchFactory.createBatch(actions, lastBatchId);
-            final Path file = batchFilePath(lastBatchId);
+    @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws IOException {
+        final BinaryBatch binaryBatch = batchFactory.createBatch(actions, lastBatchId);
+        final Path file = batchFilePath(lastBatchId);
 
-            Files.write(file, binaryBatch.getBytes());
+        Files.write(file, binaryBatch.getBytes());
 
-            fileIds.add(lastBatchId);
-            updateLastBatchId();
+        fileIds.add(lastBatchId);
+        updateLastBatchId();
 
-            storeCondition.signal();
-        } finally {
-            lock.writeLock().unlock();
-        }
+        notify();
 
         return true;
     }
 
-    @Override public BinaryBatch peek() throws InterruptedException, IOException {
-        lock.readLock().lock();
-        try {
-            while (true) {
-                final Long batchId = fileIds.peek();
-                if (batchId == null) {
-                    storeCondition.await();
-                    continue;
-                }
-
-                final Path batchFile = batchFilePath(batchId);
-                final byte[] bytes = getBatchFromFile(batchFile);
-                if (bytes != null) {
-                    return new BinaryBatch(batchId, bytes);
-                }
-
-                log.warn("Batch file {} is missing or empty", batchFile);
-
-                fileIds.remove();
+    @Override public synchronized BinaryBatch peek() throws InterruptedException, IOException {
+        while (true) {
+            final Long batchId = fileIds.peek();
+            if (batchId == null) {
+                wait();
+                continue;
             }
-        } finally {
-            lock.readLock().unlock();
+
+            final Path batchFile = batchFilePath(batchId);
+            final byte[] bytes = getBatchFromFile(batchFile);
+            if (bytes != null) {
+                return new BinaryBatch(batchId, bytes);
+            }
+
+            log.warn("Batch file {} is missing or empty", batchFile);
+
+            fileIds.remove();
         }
     }
 
-    @Override public void remove() throws IOException {
-        lock.writeLock().lock();
+    @Override public synchronized void remove() throws IOException {
         final Path batchFile = batchFilePath(fileIds.poll());
-        try {
-            if (batchFile != null) {
-                tryDeleteFile(batchFile);
-            }
-        } finally {
-            lock.writeLock().unlock();
+        if (batchFile != null) {
+            tryDeleteFile(batchFile);
         }
     }
 

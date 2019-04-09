@@ -30,7 +30,7 @@ class FileStorageTest {
     }
 
     @Test
-    void store() throws IOException, InterruptedException {
+    void storeAndPeekConcurrently() throws IOException, InterruptedException {
         final Thread consumerThread = new Thread(() -> {
             try {
                 final BinaryBatch binaryBatch1 = fileStorage.peek();
@@ -61,10 +61,19 @@ class FileStorageTest {
     }
 
     @Test
-    void peek() {
-    }
+    void restore() throws IOException, InterruptedException {
+        assertTrue(fileStorage.store(Collections.singleton(new Event("test0")), batchFactory));
+        assertTrue(fileStorage.store(Collections.singleton(new Event("test1")), batchFactory));
 
-    @Test
-    void remove() {
+        final FileStorage otherStorage = new FileStorage(this.fileStorage.path);
+        final BinaryBatch binaryBatch1 = otherStorage.peek();
+        assertEquals(0, binaryBatch1.getBatchId());
+        otherStorage.remove();
+
+        final BinaryBatch binaryBatch2 = otherStorage.peek();
+        assertEquals(1, binaryBatch2.getBatchId());
+        otherStorage.remove();
+
+        assertTrue(otherStorage.fileIds.isEmpty());
     }
 }

@@ -36,7 +36,7 @@ class HeapStorageTest {
     }
 
     @Test
-    void publishConsume() throws InterruptedException {
+    void storeAndPeekConcurrently() throws InterruptedException {
         heapStorage.setMaxBytes(1);
 
         Throwable[] throwables = new Throwable[2];

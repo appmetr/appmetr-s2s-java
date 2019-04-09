@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 /**
@@ -27,17 +28,29 @@ public class LegacyFileStorage extends FileStorage {
             return bytes;
         }
 
-        final long batchId = batchId(batchFile.getFileName().toString());
-        final Path legacyBatchFile = batchFilePath(batchId, BATCH_FILE_NAME_LEGACY_PREFIX);
+        final Path legacyBatchFile = legacyFile(batchFile);
         if (Files.notExists(legacyBatchFile) || Files.size(legacyBatchFile) == 0) {
             return null;
         }
 
-        log.info("Found legacy batch file {}", batchFile);
+        log.info("Found legacy batch file {}", legacyBatchFile);
 
-        final byte[] legacyBytes = Files.readAllBytes(batchFile);
+        final byte[] legacyBytes = Files.readAllBytes(legacyBatchFile);
         final Batch batch = SerializationUtils.deserializeJsonGzip(legacyBytes);
 
         return SerializationUtils.serializeJsonGzip(batch, false);
+    }
+
+    @Override protected void tryDeleteFile(Path batchFile) throws IOException {
+        try {
+            super.tryDeleteFile(batchFile);
+        } catch (NoSuchFileException e) {
+            super.tryDeleteFile(legacyFile(batchFile));
+        }
+    }
+
+    protected Path legacyFile(Path batchFile) {
+        final long batchId = batchId(batchFile.getFileName().toString());
+        return batchFilePath(batchId, BATCH_FILE_NAME_LEGACY_PREFIX);
     }
 }

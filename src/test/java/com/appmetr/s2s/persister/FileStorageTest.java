@@ -25,10 +25,6 @@ class FileStorageTest {
         fileStorage = new FileStorage(path);
     }
 
-    @AfterEach
-    void tearDown() {
-    }
-
     @Test
     void storeAndPeekConcurrently() throws IOException, InterruptedException {
         final Thread consumerThread = new Thread(() -> {

@@ -22,6 +22,7 @@ public class FileStorage implements BatchStorage {
     protected static final String BATCH_FILE_NAME_PREFIX = BATCH_FILE + "-";
     protected static final String BATCH_FILE_GLOB_PATTERN = BATCH_FILE + "*";
     protected static final String DIGITAL_FORMAT = "%011d";
+    protected static final String LAST_BATCH_ID_FILE_NAME = "lastBatchId";
 
     protected final ReadWriteLock lock = new ReentrantReadWriteLock();
     protected final Condition storeCondition = lock.writeLock().newCondition();
@@ -85,7 +86,7 @@ public class FileStorage implements BatchStorage {
         final Path batchFile = batchFilePath(fileIds.poll());
         try {
             if (batchFile != null) {
-                Files.delete(batchFile);
+                tryDeleteFile(batchFile);
             }
         } finally {
             lock.writeLock().unlock();
@@ -100,7 +101,7 @@ public class FileStorage implements BatchStorage {
             path = path.getParent();
         }
 
-        batchIdFile = path.toAbsolutePath().resolve("lastBatchId");
+        batchIdFile = path.toAbsolutePath().resolve(LAST_BATCH_ID_FILE_NAME);
 
         final List<Long> ids = new ArrayList<>();
         try (final DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, BATCH_FILE_GLOB_PATTERN)) {
@@ -150,5 +151,9 @@ public class FileStorage implements BatchStorage {
         }
 
         return Files.readAllBytes(batchFile);
+    }
+
+    protected void tryDeleteFile(Path batchFile) throws IOException {
+        Files.delete(batchFile);
     }
 }

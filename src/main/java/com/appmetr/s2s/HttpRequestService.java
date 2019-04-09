@@ -1,5 +1,6 @@
 package com.appmetr.s2s;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -22,6 +23,8 @@ public class HttpRequestService {
     protected ObjectMapper objectMapper = new ObjectMapper();
     protected String serverMethodName = "server.trackS2S";
     protected Clock clock = Clock.systemUTC();
+
+    protected final ThreadLocal<byte[]> bytesThreadLocal = ThreadLocal.withInitial(() -> new byte[1024]);
 
     public void setConnectTimeoutMs(int connectTimeoutMs) {
         this.connectTimeoutMs = connectTimeoutMs;
@@ -55,17 +58,16 @@ public class HttpRequestService {
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/octet-stream");
-
             connection.setFixedLengthStreamingMode(batches.length);
-            OutputStream out = connection.getOutputStream();
-            out.write(batches);
-            out.close();
 
-            // Execute HTTP Post Request
-            final String result = readResponse(connection.getInputStream());
+            try (OutputStream out = connection.getOutputStream()) {
+                out.write(batches);
+            }
+            
+            try (InputStream inputStream = connection.getInputStream()) {
+                final String result = readStream(inputStream);
+                final JsonNode responseJson = objectMapper.readTree(result);
 
-            try {
-                final JsonNode responseJson = objectMapper.readTree(result.toString());
                 JsonNode status = null;
                 if (!isError(responseJson)) {
                     status = responseJson.get("response").get("status");
@@ -74,7 +76,7 @@ public class HttpRequestService {
                 if (status != null && "OK".equalsIgnoreCase(status.textValue())) {
                     return true;
                 }
-            } catch (Exception jsonError) {
+            } catch (JsonParseException jsonError) {
                 log.error("Json exception", jsonError);
             }
         } catch (Exception error) {
@@ -128,9 +130,9 @@ public class HttpRequestService {
         return queryBuilder.toString();
     }
 
-    protected String readResponse(InputStream inputStream) throws IOException {
+    protected String readStream(InputStream inputStream) throws IOException {
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
-            final byte[] buffer = new byte[1024];
+            final byte[] buffer = bytesThreadLocal.get();
             while (true) {
                 final int length = inputStream.read(buffer);
                 if (length == -1) {

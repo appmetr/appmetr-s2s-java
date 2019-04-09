@@ -20,7 +20,6 @@ class HeapStorageTest {
 
     HeapStorage heapStorage = new HeapStorage();
 
-
     @BeforeEach
     void setUp() {
         heapStorage.setClock(Clock.fixed(Instant.ofEpochMilli(1), ZoneOffset.UTC));

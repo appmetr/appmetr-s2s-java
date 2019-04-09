@@ -11,6 +11,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -23,6 +24,7 @@ public class FileStorage implements BatchStorage {
     protected static final String DIGITAL_FORMAT = "%011d";
 
     protected final ReadWriteLock lock = new ReentrantReadWriteLock();
+    protected final Condition storeCondition = lock.writeLock().newCondition();
 
     protected Queue<Long> fileIds;
     protected Path path;
@@ -44,6 +46,8 @@ public class FileStorage implements BatchStorage {
 
             fileIds.add(lastBatchId);
             updateLastBatchId();
+
+            storeCondition.signal();
         } finally {
             lock.writeLock().unlock();
         }
@@ -51,14 +55,14 @@ public class FileStorage implements BatchStorage {
         return true;
     }
 
-    @Override public BinaryBatch peek() throws IOException {
+    @Override public BinaryBatch peek() throws InterruptedException, IOException {
         lock.readLock().lock();
         try {
             while (true) {
                 final Long batchId = fileIds.peek();
-
                 if (batchId == null) {
-                    return null;
+                    storeCondition.await();
+                    continue;
                 }
 
                 final Path batchFile = batchFilePath(batchId);
@@ -89,6 +93,15 @@ public class FileStorage implements BatchStorage {
     }
 
     protected void init() throws IOException {
+        if (Files.notExists(path)) {
+            Files.createDirectories(path);
+        }
+        if (!Files.isDirectory(path)) {
+            path = path.getParent();
+        }
+
+        batchIdFile = path.toAbsolutePath().resolve("lastBatchId");
+
         final List<Long> ids = new ArrayList<>();
         try (final DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path, BATCH_FILE_GLOB_PATTERN)) {
             for (Path file : directoryStream) {

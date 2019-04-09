@@ -7,27 +7,27 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.SocketTimeoutException;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.Date;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
 public class HttpRequestService {
     private static final Logger log = LoggerFactory.getLogger(HttpRequestService.class);
 
-    protected int connectTimeout = 60 * 1000;
-    protected int readTimeout = 120 * 1000;
+    protected int connectTimeoutMs = 60 * 1000;
+    protected int readTimeoutMs = 120 * 1000;
     protected ObjectMapper objectMapper = new ObjectMapper();
     protected String serverMethodName = "server.trackS2S";
+    protected Clock clock = Clock.systemUTC();
 
-    public void setConnectTimeout(int connectTimeout) {
-        this.connectTimeout = connectTimeout;
+    public void setConnectTimeoutMs(int connectTimeoutMs) {
+        this.connectTimeoutMs = connectTimeoutMs;
     }
 
-    public void setReadTimeout(int readTimeout) {
-        this.readTimeout = readTimeout;
+    public void setReadTimeoutMs(int readTimeoutMs) {
+        this.readTimeoutMs = readTimeoutMs;
     }
 
     public void setObjectMapper(ObjectMapper objectMapper) {
@@ -38,16 +38,15 @@ public class HttpRequestService {
         this.serverMethodName = serverMethodName;
     }
 
-    public boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
-        final Map<String, String> params = new HashMap<>(3);
-        params.put("method", serverMethodName);
-        params.put("token", token);
-        params.put("timestamp", String.valueOf(new Date().getTime()));
+    public void setClock(Clock clock) {
+        this.clock = clock;
+    }
 
-        final URL url = new URL(httpURL + "?" + makeQueryString(params));
+    public boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
+        final URL url = makeUrl(httpURL, token);
         final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setConnectTimeout(connectTimeout);
-        connection.setReadTimeout(readTimeout);
+        connection.setConnectTimeout(connectTimeoutMs);
+        connection.setReadTimeout(readTimeoutMs);
 
         try {
             // Add body data
@@ -62,13 +61,7 @@ public class HttpRequestService {
             out.close();
 
             // Execute HTTP Post Request
-            final StringBuilder result = new StringBuilder();
-            try (BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-                String inputLine;
-                while ((inputLine = input.readLine()) != null) {
-                    result.append(inputLine);
-                }
-            }
+            final String result = readResponse(connection.getInputStream());
 
             try {
                 final JsonNode responseJson = objectMapper.readTree(result.toString());
@@ -111,22 +104,37 @@ public class HttpRequestService {
         return true;
     }
 
+    protected URL makeUrl(String httpURL, String token) throws MalformedURLException {
+        final Map<String, String> params = new HashMap<>(3);
+        params.put("method", serverMethodName);
+        params.put("token", token);
+        params.put("timestamp", String.valueOf(clock.millis()));
+
+        return new URL(httpURL + "?" + makeQueryString(params));
+    }
+
     protected String makeQueryString(Map<String, String> params) {
-        StringBuilder queryBuilder = new StringBuilder();
-        int paramCount = 0;
-        for (Map.Entry<String, String> param : params.entrySet()) {
-            if (param.getValue() != null) {
-                paramCount++;
-                if (paramCount > 1) {
+        final StringBuilder queryBuilder = new StringBuilder();
+        params.forEach((k, v) -> {
+            if (v != null) {
+                if (queryBuilder.length() > 0) {
                     queryBuilder.append("&");
                 }
-                try {
-                    queryBuilder.append(param.getKey()).append("=").append(URLEncoder.encode(param.getValue(), "UTF-8"));
-                } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e);
-                }
+
+                queryBuilder.append(k).append("=").append(v); //we know nothing to encode
+            }
+        });
+        return queryBuilder.toString();
+    }
+
+    protected String readResponse(InputStream inputStream) throws IOException {
+        final StringBuilder result = new StringBuilder();
+        try (BufferedReader input = new BufferedReader(new InputStreamReader(inputStream))) {
+            String inputLine;
+            while ((inputLine = input.readLine()) != null) {
+                result.append(inputLine);
             }
         }
-        return queryBuilder.toString();
+        return result.toString();
     }
 }

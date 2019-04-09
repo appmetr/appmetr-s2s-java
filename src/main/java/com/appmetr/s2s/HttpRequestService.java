@@ -54,7 +54,6 @@ public class HttpRequestService {
         connection.setReadTimeout(readTimeoutMs);
 
         try {
-            // Add body data
             connection.setDoInput(true);
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");

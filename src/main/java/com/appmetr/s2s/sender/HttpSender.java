@@ -1,4 +1,4 @@
-package com.appmetr.s2s;
+package com.appmetr.s2s.sender;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,8 +15,8 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
-public class HttpRequestService {
-    private static final Logger log = LoggerFactory.getLogger(HttpRequestService.class);
+public class HttpSender implements Sender {
+    private static final Logger log = LoggerFactory.getLogger(HttpSender.class);
 
     protected static final ThreadLocal<byte[]> bytesThreadLocal = ThreadLocal.withInitial(() -> new byte[1024]);
 
@@ -47,13 +47,19 @@ public class HttpRequestService {
         this.clock = clock;
     }
 
-    public boolean sendRequest(String httpURL, String token, byte[] batches) throws IOException {
-        final URL url = makeUrl(httpURL, token);
-        final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setConnectTimeout(connectTimeoutMs);
-        connection.setReadTimeout(readTimeoutMs);
+    public boolean send(String httpURL, String deploy, byte[] batches) {
+        final HttpURLConnection connection;
+        try {
+            final URL url = makeUrl(httpURL, deploy);
+            connection = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            log.error("Connection creation exception to {} and {}", httpURL, deploy, e);
+            return false;
+        }
 
         try {
+            connection.setConnectTimeout(connectTimeoutMs);
+            connection.setReadTimeout(readTimeoutMs);
             connection.setDoInput(true);
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
@@ -65,6 +71,10 @@ public class HttpRequestService {
             }
             
             try (InputStream inputStream = connection.getInputStream()) {
+                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    return false;
+                }
+
                 final String result = readStream(inputStream);
                 final JsonNode responseJson = objectMapper.readTree(result);
 
@@ -79,8 +89,8 @@ public class HttpRequestService {
             } catch (JsonParseException jsonError) {
                 log.error("Json exception", jsonError);
             }
-        } catch (Exception error) {
-            log.error("Server error", error);
+        } catch (Exception e) {
+            log.warn("Request exception", e);
         } finally {
             connection.disconnect();
         }

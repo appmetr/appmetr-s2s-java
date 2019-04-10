@@ -5,6 +5,8 @@ import com.appmetr.s2s.persister.BatchFactoryServerId;
 import com.appmetr.s2s.persister.BatchStorage;
 import com.appmetr.s2s.persister.GzippedJsonBatchFactory;
 import com.appmetr.s2s.persister.NonBlockingHeapStorage;
+import com.appmetr.s2s.sender.HttpSender;
+import com.appmetr.s2s.sender.Sender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +24,7 @@ public class AppMetr {
     private String serverId = UUID.randomUUID().toString();
     private Clock clock = Clock.systemUTC();
     private BatchStorage batchStorage = new NonBlockingHeapStorage();
-    private HttpRequestService httpRequestService = new HttpRequestService();
+    private Sender sender = new HttpSender();
     private BatchFactoryServerId batchFactory = GzippedJsonBatchFactory.instance;
 
     private int maxBatchActions = 1000;
@@ -69,8 +71,8 @@ public class AppMetr {
         this.batchStorage = batchStorage;
     }
 
-    public void setHttpRequestService(HttpRequestService httpRequestService) {
-        this.httpRequestService = httpRequestService;
+    public void setSender(HttpSender sender) {
+        this.sender = sender;
     }
 
     public void setBatchFactory(BatchFactoryServerId batchFactory) {
@@ -224,8 +226,8 @@ public class AppMetr {
                 final Instant batchUploadStart = clock.instant();
                 boolean result;
                 try {
-                    result = httpRequestService.sendRequest(url, token, binaryBatch.getBytes());
-                } catch (IOException e) {
+                    result = sender.send(url, token, binaryBatch.getBytes());
+                } catch (Exception e) {
                     log.warn("Exception while sending the batch {}", binaryBatch.getBatchId(), e);
                     result = false;
                 }

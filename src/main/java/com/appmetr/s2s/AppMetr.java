@@ -1,12 +1,9 @@
 package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Action;
-import com.appmetr.s2s.persister.BatchFactoryServerId;
-import com.appmetr.s2s.persister.BatchStorage;
-import com.appmetr.s2s.persister.GzippedJsonBatchFactory;
-import com.appmetr.s2s.persister.NonBlockingHeapStorage;
-import com.appmetr.s2s.sender.HttpSender;
-import com.appmetr.s2s.sender.Sender;
+import com.appmetr.s2s.persister.*;
+import com.appmetr.s2s.sender.HttpBatchSender;
+import com.appmetr.s2s.sender.BatchSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,28 +15,28 @@ import java.util.UUID;
 public class AppMetr {
     private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
 
-    private String token;
-    private String url;
-    private boolean retryBatchUpload;
-    private String serverId = UUID.randomUUID().toString();
-    private Clock clock = Clock.systemUTC();
-    private BatchStorage batchStorage = new NonBlockingHeapStorage();
-    private Sender sender = new HttpSender();
-    private BatchFactoryServerId batchFactory = GzippedJsonBatchFactory.instance;
+    protected String token;
+    protected String url;
+    protected boolean retryBatchUpload;
+    protected String serverId = UUID.randomUUID().toString();
+    protected Clock clock = Clock.systemUTC();
+    protected BatchStorage batchStorage = new HeapStorage();
+    protected BatchSender batchSender = new HttpBatchSender();
+    protected BatchFactoryServerId batchFactory = GzippedJsonBatchFactory.instance;
 
-    private int maxBatchActions = 1000;
-    private long maxBatchBytes = 1024 * 1024;
-    private Duration flushPeriod = Duration.ofMinutes(1);
-    private Duration readRetryTimeout = Duration.ofSeconds(3);
-    private Duration uploadRetryTimeout = Duration.ofSeconds(1);
+    protected int maxBatchActions = 1000;
+    protected long maxBatchBytes = 1024 * 1024;
+    protected Duration flushPeriod = Duration.ofMinutes(1);
+    protected Duration readRetryTimeout = Duration.ofSeconds(3);
+    protected Duration uploadRetryTimeout = Duration.ofSeconds(1);
 
-    private boolean stopped = true;
-    private long actionsBytes;
-    private Instant lastFlushTime = Instant.MAX;
-    private ArrayList<Action> actionList = new ArrayList<>();
-    private Thread uploadThread;
+    protected boolean stopped = true;
+    protected long actionsBytes;
+    protected Instant lastFlushTime = Instant.MAX;
+    protected ArrayList<Action> actionList = new ArrayList<>();
+    protected Thread uploadThread;
 
-    public AppMetr() {
+    protected AppMetr() {
     }
 
     public AppMetr(String token, String url) {
@@ -71,8 +68,8 @@ public class AppMetr {
         this.batchStorage = batchStorage;
     }
 
-    public void setSender(HttpSender sender) {
-        this.sender = sender;
+    public void setBatchSender(BatchSender batchSender) {
+        this.batchSender = batchSender;
     }
 
     public void setBatchFactory(BatchFactoryServerId batchFactory) {
@@ -107,6 +104,9 @@ public class AppMetr {
         this.uploadRetryTimeout = uploadRetryTimeout;
     }
 
+    /**
+     * Starts uploading
+     */
     public synchronized void start() {
         uploadThread = new Thread(this::upload, "appmetr-upload-" + token);
         uploadThread.setUncaughtExceptionHandler((t, e) -> log.error("Uncaught upload exception", e));
@@ -116,9 +116,7 @@ public class AppMetr {
     }
 
     /**
-     * Does flush and then upload all pending actions.
-     * Stops inner threads.
-     * May requires some time for competition even no pending actions exist.
+     * Does flush and stop uploading.
      */
     public synchronized void stop() {
         stopped = true;
@@ -190,11 +188,13 @@ public class AppMetr {
         }
     }
 
-    private boolean needFlush() {
-        return actionsBytes >= maxBatchBytes || actionList.size() >= maxBatchActions || clock.instant().minus(flushPeriod).isAfter(lastFlushTime);
+    protected boolean needFlush() {
+        return actionsBytes >= maxBatchBytes
+                || (maxBatchActions > 0 && actionList.size() > maxBatchActions)
+                || clock.instant().minus(flushPeriod).isAfter(lastFlushTime);
     }
 
-    private void upload() {
+    protected void upload() {
         log.trace("Upload starting");
 
         int uploadedBatchCounter = 0;
@@ -226,7 +226,7 @@ public class AppMetr {
                 final Instant batchUploadStart = clock.instant();
                 boolean result;
                 try {
-                    result = sender.send(url, token, binaryBatch.getBytes());
+                    result = batchSender.send(url, token, binaryBatch.getBytes());
                 } catch (Exception e) {
                     log.warn("Exception while sending the batch {}", binaryBatch.getBatchId(), e);
                     result = false;
@@ -243,16 +243,16 @@ public class AppMetr {
                 }
 
                 log.error("Error while uploading batch {}", binaryBatch.getBatchId());
-                if (!retryBatchUpload) {
-                    tryRemove(binaryBatch.getBatchId());
-                    break;
-                }
 
                 try {
                     Thread.sleep(uploadRetryTimeout.toMillis());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
+                }
+
+                if (!retryBatchUpload) {
+                    tryRemove(binaryBatch.getBatchId());
                 }
 
                 log.info("Retrying the batch {}", binaryBatch.getBatchId());
@@ -267,7 +267,7 @@ public class AppMetr {
         Thread.currentThread().interrupt();
     }
 
-    private void tryRemove(long batchId) {
+    protected void tryRemove(long batchId) {
         try {
             batchStorage.remove();
         } catch (IOException e) {

@@ -15,8 +15,8 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
-public class HttpSender implements Sender {
-    private static final Logger log = LoggerFactory.getLogger(HttpSender.class);
+public class HttpBatchSender implements BatchSender {
+    private static final Logger log = LoggerFactory.getLogger(HttpBatchSender.class);
 
     protected static final ThreadLocal<byte[]> bytesThreadLocal = ThreadLocal.withInitial(() -> new byte[1024]);
 
@@ -47,7 +47,7 @@ public class HttpSender implements Sender {
         this.clock = clock;
     }
 
-    public boolean send(String httpURL, String deploy, byte[] batches) {
+    @Override public boolean send(String httpURL, String deploy, byte[] batches) {
         final HttpURLConnection connection;
         try {
             final URL url = makeUrl(httpURL, deploy);

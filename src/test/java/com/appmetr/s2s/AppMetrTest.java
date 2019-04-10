@@ -1,52 +1,47 @@
 package com.appmetr.s2s;
 
 
-import org.junit.jupiter.api.Disabled;
+import com.appmetr.s2s.events.Event;
+import com.appmetr.s2s.persister.BatchStorage;
+import com.appmetr.s2s.sender.BatchSender;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class AppMetrTest {
 
     private static String token = "";
     private static String url = "";
-    private static String filePersisterPath = "target";
 
     @Test
-    public void testFilePersister() {
-//        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
-//        for (int i = 0; i < 10001; i++) {
-//            HashMap<String, Object> properties = new HashMap<String, Object>();
-//
-//            for (int j = 0; j < 25; j++) {
-//                properties.put(String.valueOf(j), getRandomObject());
-//            }
-//            appMetr.track(new Event("event#" + i % 100).setProperties(properties));
-//        }
-//        appMetr.stop();
-    }
+    void storeByActionsNumber() throws Exception {
+        final BatchStorage mockStorage = Mockito.mock(BatchStorage.class);
+        Mockito.when(mockStorage.store(any(), any())).thenReturn(true);
+        when(mockStorage.peek()).thenAnswer(invocation -> {
+            waitForever();
+            return null;
+        });
 
-    @Disabled
-    @Test
-    public void testHangUp() throws Exception {
-//        AppMetr appMetr = new AppMetr(token, url, new FileBatchPersister(filePersisterPath));
-//
-//        Thread.sleep(600000);
-    }
+        final AppMetr appMetr = new AppMetr(token, url);
+        appMetr.setBatchSender(NothingBatchSender.instance);
+        appMetr.setBatchStorage(mockStorage);
+        appMetr.setMaxBatchActions(1);
+        appMetr.start();
 
-    @Test
-    public void testMemoryPersister() {
-//        AppMetr appMetr = new AppMetr(token, url);
-//        for (int i = 0; i < 500; i++) {
-//            HashMap<String, Object> properties = new HashMap<String, Object>();
-//
-//            for (int j = 0; j < 5; j++) {
-//                properties.put(String.valueOf(j), getRandomObject());
-//            }
-//            appMetr.track(new Event("event#" + i).setProperties(properties));
-//        }
-//        appMetr.stop();
+        assertTrue(appMetr.track(new Event("test1")));
+        assertTrue(appMetr.track(new Event("test2")));
+
+        appMetr.stop();
+
+        verify(mockStorage).store(eq(Collections.singleton(new Event("test1"))), any());
     }
 
     private static Object getRandomObject() {
@@ -74,4 +69,29 @@ public class AppMetrTest {
         }
         return new String(text);
     }
+
+    static void waitForever() throws InterruptedException {
+        while (!Thread.interrupted()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw e;
+            }
+        }
+    }
+
+    static class NothingBatchSender implements BatchSender {
+        static final NothingBatchSender instance = new NothingBatchSender();
+
+        @Override public boolean send(String uri, String token, byte[] batches) {
+            try {
+                waitForever();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return false;
+        }
+    }
+
+
 }

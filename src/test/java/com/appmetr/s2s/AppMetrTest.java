@@ -2,37 +2,34 @@ package com.appmetr.s2s;
 
 
 import com.appmetr.s2s.events.Event;
-import com.appmetr.s2s.persister.BatchStorage;
+import com.appmetr.s2s.persister.GzippedJsonBatchFactoryTest;
 import com.appmetr.s2s.sender.BatchSender;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Random;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class AppMetrTest {
 
-    private static String token = "";
-    private static String url = "";
+    private static String token = "testToken";
+    private static String url = "testUrl";
 
     @Test
     void storeByActionsNumber() throws Exception {
-        final BatchStorage mockStorage = Mockito.mock(BatchStorage.class);
-        Mockito.when(mockStorage.store(any(), any())).thenReturn(true);
-        when(mockStorage.peek()).thenAnswer(invocation -> {
-            waitForever();
-            return null;
-        });
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
 
         final AppMetr appMetr = new AppMetr(token, url);
-        appMetr.setBatchSender(NothingBatchSender.instance);
-        appMetr.setBatchStorage(mockStorage);
+        appMetr.setServerId("s1");
+        appMetr.setBatchSender(mockSender);
         appMetr.setMaxBatchActions(1);
         appMetr.start();
 
@@ -41,7 +38,18 @@ public class AppMetrTest {
 
         appMetr.stop();
 
-        verify(mockStorage).store(eq(Collections.singleton(new Event("test1"))), any());
+        ArgumentCaptor<byte[]> batch1 = ArgumentCaptor.forClass(byte[].class);
+        verify(mockSender).send(eq(url), eq(token), batch1.capture());
+        final JsonNode batchNode = GzippedJsonBatchFactoryTest.decompress(batch1.getValue());
+        assertEquals("s1", batchNode.get("serverId").asText());
+        final ArrayNode events = (ArrayNode) batchNode.get("batch");
+        assertTrue(events.isArray());
+        assertEquals(1, events.size());
+
+        assertEquals("trackEvent", events.get(0).get("action").asText());
+        assertEquals("test1", events.get(0).get("event").asText());
+
+        System.out.println(batchNode);
     }
 
     private static Object getRandomObject() {

@@ -29,9 +29,8 @@ public class GzippedJsonBatchFactoryTest {
         final BinaryBatch batch = GzippedJsonBatchFactory.instance.createBatch(Arrays.asList(
                 new Level(2).setProperties(Collections.singletonMap("a", 5)),
                 new Payment("order1", "trans1", "proc1", "USD", "123")), 1, "s1");
-        final String decompressed = decompress(batch.getBytes());
 
-        final JsonNode jsonNode = jackson.readTree(decompressed);
+        final JsonNode jsonNode = decompress(batch.getBytes());
         assertEquals(1, jsonNode.get("batchId").asLong());
         assertEquals("s1", jsonNode.get("serverId").asText());
 
@@ -45,13 +44,13 @@ public class GzippedJsonBatchFactoryTest {
         assertEquals(5, events.get(0).get("properties").get("a").asInt());
     }
 
-    String decompress(byte[] compressedBody) throws IOException {
+    public static JsonNode decompress(byte[] compressedBody) throws IOException {
         ByteArrayOutputStream inflatedByteStream = new ByteArrayOutputStream();
         Inflater inflater = new Inflater(true);
         try (InflaterOutputStream inflateStream = new InflaterOutputStream(inflatedByteStream, inflater)) {
             inflateStream.write(compressedBody);
             inflateStream.finish();
-            return inflatedByteStream.toString(StandardCharsets.UTF_8.name());
+            return jackson.readTree(inflatedByteStream.toString(StandardCharsets.UTF_8.name()));
         } finally {
             inflater.end();
         }

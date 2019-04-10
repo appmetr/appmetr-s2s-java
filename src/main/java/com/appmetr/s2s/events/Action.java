@@ -9,7 +9,7 @@ import java.util.Objects;
 public abstract class Action {
     private String action;
     private long timestamp = new Date().getTime();
-    private Map<String, Object> properties = new HashMap<String, Object>();
+    private Map<String, Object> properties = new HashMap<>();
     private String userId;
     private long userTime;
 

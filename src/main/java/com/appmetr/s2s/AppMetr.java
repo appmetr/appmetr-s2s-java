@@ -220,7 +220,7 @@ public class AppMetr {
 
             allBatchCounter++;
 
-            log.trace("Batch {} read time: {} ms", binaryBatch.getBatchId(), Duration.between(batchReadStart, clock.instant()));
+            log.trace("Batch {} read time: {}", binaryBatch.getBatchId(), Duration.between(batchReadStart, clock.instant()));
 
             while (true) {
                 final Instant batchUploadStart = clock.instant();
@@ -232,7 +232,7 @@ public class AppMetr {
                     result = false;
                 }
 
-                log.debug("Batch {} {} finished. Took {} ms", binaryBatch.getBatchId(), result ? "" : "NOT", Duration.between(batchUploadStart, clock.instant()));
+                log.debug("Batch {} {} finished. Took {}", binaryBatch.getBatchId(), result ? "" : "NOT", Duration.between(batchUploadStart, clock.instant()));
 
                 if (result) {
                     log.trace("Batch {} successfully uploaded", binaryBatch.getBatchId());

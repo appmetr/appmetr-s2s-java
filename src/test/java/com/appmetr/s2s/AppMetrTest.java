@@ -1,8 +1,11 @@
 package com.appmetr.s2s;
 
 
+import com.appmetr.s2s.events.Action;
 import com.appmetr.s2s.events.Event;
+import com.appmetr.s2s.persister.BatchFactory;
 import com.appmetr.s2s.persister.GzippedJsonBatchFactoryTest;
+import com.appmetr.s2s.persister.HeapStorage;
 import com.appmetr.s2s.sender.BatchSender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -10,8 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import java.util.ArrayList;
-import java.util.Random;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,17 +26,15 @@ public class AppMetrTest {
     private static String url = "testUrl";
 
     @Test
-    void storeByActionsNumber() throws Exception {
+    void sendByStop() throws Exception {
         final BatchSender mockSender = Mockito.mock(BatchSender.class);
 
         final AppMetr appMetr = new AppMetr(token, url);
         appMetr.setServerId("s1");
         appMetr.setBatchSender(mockSender);
-        appMetr.setMaxBatchActions(1);
         appMetr.start();
 
         assertTrue(appMetr.track(new Event("test1")));
-        assertTrue(appMetr.track(new Event("test2")));
 
         appMetr.stop();
 
@@ -48,8 +48,31 @@ public class AppMetrTest {
 
         assertEquals("trackEvent", events.get(0).get("action").asText());
         assertEquals("test1", events.get(0).get("event").asText());
+    }
 
-        System.out.println(batchNode);
+    @Test
+    void storeByActionsNumber() throws Exception {
+        final TestStorage testStorage = new TestStorage();
+
+        final AppMetr appMetr = new AppMetr(token, url);
+        appMetr.setServerId("s1");
+        appMetr.setBatchSender(NothingBatchSender.instance);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.setMaxBatchActions(1);
+        appMetr.start();
+
+        final Event event1 = new Event("test1");
+        final Event event2 = new Event("test2");
+        assertTrue(appMetr.track(event1));
+        assertTrue(appMetr.track(event2));
+
+        assertEquals(1, testStorage.storeCalls.size());
+        assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
+
+        appMetr.stop();
+
+        assertEquals(2, testStorage.storeCalls.size());
+        assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
     }
 
     private static Object getRandomObject() {
@@ -88,6 +111,15 @@ public class AppMetrTest {
         }
     }
 
+    static class TestStorage extends HeapStorage {
+        List<List<Action>> storeCalls = new ArrayList<>();
+
+        @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException {
+            storeCalls.add(new ArrayList<>(actions));
+            return super.store(actions, batchFactory);
+        }
+    }
+
     static class NothingBatchSender implements BatchSender {
         static final NothingBatchSender instance = new NothingBatchSender();
 
@@ -100,6 +132,4 @@ public class AppMetrTest {
             return false;
         }
     }
-
-
 }

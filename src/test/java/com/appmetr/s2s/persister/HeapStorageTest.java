@@ -32,7 +32,7 @@ class HeapStorageTest {
         assertThrows(AssertionFailedError.class, () -> assertTimeoutPreemptively(ofMillis(1), () -> {
             heapStorage.store(Collections.singleton(new Event("test2")), batchFactory);
         }));
-        assertEquals(1, heapStorage.batchQueue.size());
+        assertEquals(1, heapStorage.batchesQueue.size());
     }
 
     @Test
@@ -80,6 +80,6 @@ class HeapStorageTest {
             fail(throwables[1]);
         }
 
-        assertTrue(heapStorage.batchQueue.isEmpty());
+        assertTrue(heapStorage.batchesQueue.isEmpty());
     }
 }

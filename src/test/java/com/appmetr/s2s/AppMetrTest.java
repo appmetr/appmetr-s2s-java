@@ -26,7 +26,7 @@ public class AppMetrTest {
     private static String url = "testUrl";
 
     @Test
-    void sendByStop() throws Exception {
+    void sendManually() throws Exception {
         final BatchSender mockSender = Mockito.mock(BatchSender.class);
 
         final AppMetr appMetr = new AppMetr(token, url);
@@ -36,7 +36,8 @@ public class AppMetrTest {
 
         assertTrue(appMetr.track(new Event("test1")));
 
-        appMetr.stop();
+        appMetr.flush();
+        Thread.sleep(1);
 
         ArgumentCaptor<byte[]> batch1 = ArgumentCaptor.forClass(byte[].class);
         verify(mockSender).send(eq(url), eq(token), batch1.capture());
@@ -48,6 +49,8 @@ public class AppMetrTest {
 
         assertEquals("trackEvent", events.get(0).get("action").asText());
         assertEquals("test1", events.get(0).get("event").asText());
+
+        appMetr.stop();
     }
 
     @Test
@@ -117,6 +120,10 @@ public class AppMetrTest {
         @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException {
             storeCalls.add(new ArrayList<>(actions));
             return super.store(actions, batchFactory);
+        }
+        
+        Queue<BinaryBatch> getBathesQueue() {
+            return batchesQueue;
         }
     }
 

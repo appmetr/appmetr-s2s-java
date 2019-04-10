@@ -10,7 +10,7 @@ import java.util.Queue;
 
 public class AbstractHeapStorage implements BatchStorage {
 
-    protected Queue<BinaryBatch> batchQueue = new ArrayDeque<>();
+    protected Queue<BinaryBatch> batchesQueue = new ArrayDeque<>();
     protected Clock clock = Clock.systemUTC();
     protected long maxBytes;
 
@@ -38,7 +38,7 @@ public class AbstractHeapStorage implements BatchStorage {
 
         occupiedBytes += binaryBatch.getBytes().length;
         previousBatchId = batchId;
-        batchQueue.add(binaryBatch);
+        batchesQueue.add(binaryBatch);
 
         notify();
 
@@ -47,7 +47,7 @@ public class AbstractHeapStorage implements BatchStorage {
 
     @Override public synchronized BinaryBatch peek() throws InterruptedException {
         while (true) {
-            final BinaryBatch binaryBatch = batchQueue.peek();
+            final BinaryBatch binaryBatch = batchesQueue.peek();
             if (binaryBatch != null) {
                 return binaryBatch;
             }
@@ -56,7 +56,7 @@ public class AbstractHeapStorage implements BatchStorage {
     }
 
     @Override public synchronized void remove() {
-        final BinaryBatch binaryBatch = batchQueue.poll();
+        final BinaryBatch binaryBatch = batchesQueue.poll();
         if (binaryBatch != null) {
             occupiedBytes -= binaryBatch.getBytes().length;
         }

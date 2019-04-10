@@ -45,7 +45,7 @@ class NonBlockingHeapStorageTest {
             fail(throwables[0]);
         }
 
-        assertTrue(nonBlockingHeapStorage.batchQueue.isEmpty());
+        assertTrue(nonBlockingHeapStorage.batchesQueue.isEmpty());
     }
 
     @Test
@@ -72,7 +72,7 @@ class NonBlockingHeapStorageTest {
             fail(throwables[0]);
         }
 
-        assertTrue(nonBlockingHeapStorage.batchQueue.isEmpty());
+        assertTrue(nonBlockingHeapStorage.batchesQueue.isEmpty());
     }
 
     @Test
@@ -80,6 +80,6 @@ class NonBlockingHeapStorageTest {
         nonBlockingHeapStorage.setMaxBytes(1);
 
         assertFalse(nonBlockingHeapStorage.store(Collections.singleton(new Event("test")), batchFactory));
-        assertTrue(nonBlockingHeapStorage.batchQueue.isEmpty());
+        assertTrue(nonBlockingHeapStorage.batchesQueue.isEmpty());
     }
 }

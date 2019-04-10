@@ -13,6 +13,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,7 +62,6 @@ public class AppMetrTest {
         final TestStorage testStorage = new TestStorage();
 
         final AppMetr appMetr = new AppMetr(token, url);
-        appMetr.setServerId("s1");
         appMetr.setBatchSender(NothingBatchSender.instance);
         appMetr.setBatchStorage(testStorage);
         appMetr.setMaxBatchActions(1);
@@ -83,7 +86,6 @@ public class AppMetrTest {
         final TestStorage testStorage = new TestStorage();
 
         final AppMetr appMetr = new AppMetr(token, url);
-        appMetr.setServerId("s1");
         appMetr.setBatchSender(NothingBatchSender.instance);
         appMetr.setBatchStorage(testStorage);
         appMetr.setMaxBatchBytes(1);
@@ -92,6 +94,34 @@ public class AppMetrTest {
         final Event event1 = new Event("test1");
         final Event event2 = new Event("test2");
         assertTrue(appMetr.track(event1));
+        assertTrue(appMetr.track(event2));
+
+        assertEquals(1, testStorage.storeCalls.size());
+        assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
+
+        appMetr.stop();
+
+        assertEquals(2, testStorage.storeCalls.size());
+        assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
+    }
+
+    @Test
+    void storeByTime() throws Exception {
+        final TestStorage testStorage = new TestStorage();
+
+        final AppMetr appMetr = new AppMetr(token, url);
+        appMetr.setBatchSender(NothingBatchSender.instance);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.setFlushPeriod(Duration.ofSeconds(1));
+        appMetr.setClock(Clock.fixed(Instant.ofEpochSecond(1), ZoneOffset.UTC));
+        appMetr.start();
+
+        final Event event1 = new Event("test1");
+        final Event event2 = new Event("test2");
+        assertTrue(appMetr.track(event1));
+
+        appMetr.setClock(Clock.fixed(Instant.ofEpochSecond(2), ZoneOffset.UTC));
+
         assertTrue(appMetr.track(event2));
 
         assertEquals(1, testStorage.storeCalls.size());

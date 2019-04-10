@@ -191,7 +191,7 @@ public class AppMetr {
     protected boolean needFlush() {
         return actionsBytes >= maxBatchBytes
                 || (maxBatchActions > 0 && actionList.size() >= maxBatchActions)
-                || clock.instant().minus(flushPeriod).isAfter(lastFlushTime);
+                || Duration.between(clock.instant(), lastFlushTime).compareTo(flushPeriod) >= 0;
     }
 
     protected void upload() {

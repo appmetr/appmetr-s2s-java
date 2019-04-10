@@ -54,7 +54,7 @@ public class AppMetrTest {
     }
 
     @Test
-    void storeByActionsNumber() throws Exception {
+    void storeByBatchActions() throws Exception {
         final TestStorage testStorage = new TestStorage();
 
         final AppMetr appMetr = new AppMetr(token, url);
@@ -62,6 +62,31 @@ public class AppMetrTest {
         appMetr.setBatchSender(NothingBatchSender.instance);
         appMetr.setBatchStorage(testStorage);
         appMetr.setMaxBatchActions(1);
+        appMetr.start();
+
+        final Event event1 = new Event("test1");
+        final Event event2 = new Event("test2");
+        assertTrue(appMetr.track(event1));
+        assertTrue(appMetr.track(event2));
+
+        assertEquals(1, testStorage.storeCalls.size());
+        assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
+
+        appMetr.stop();
+
+        assertEquals(2, testStorage.storeCalls.size());
+        assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
+    }
+
+    @Test
+    void storeByBatchBytes() throws Exception {
+        final TestStorage testStorage = new TestStorage();
+
+        final AppMetr appMetr = new AppMetr(token, url);
+        appMetr.setServerId("s1");
+        appMetr.setBatchSender(NothingBatchSender.instance);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.setMaxBatchBytes(1);
         appMetr.start();
 
         final Event event1 = new Event("test1");

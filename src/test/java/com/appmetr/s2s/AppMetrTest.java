@@ -19,8 +19,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
@@ -133,6 +132,24 @@ public class AppMetrTest {
         assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
     }
 
+    @Test
+    void storeDiscarded() throws Exception {
+        final DiscardStorage testStorage = new DiscardStorage();
+
+        final AppMetr appMetr = new AppMetr(token, url);
+        appMetr.setBatchSender(NothingBatchSender.instance);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.setMaxBatchActions(1);
+        appMetr.start();
+
+        final Event event1 = new Event("test1");
+        final Event event2 = new Event("test2");
+        assertTrue(appMetr.track(event1));
+        assertFalse(appMetr.track(event2));
+
+        appMetr.stop();
+    }
+
     private static Object getRandomObject() {
         Random random = new Random();
         int switcher = random.nextInt(5);
@@ -160,12 +177,8 @@ public class AppMetrTest {
     }
 
     static void waitForever() throws InterruptedException {
-        while (!Thread.interrupted()) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw e;
-            }
+        while (true) {
+            Thread.sleep(100);
         }
     }
 
@@ -179,6 +192,12 @@ public class AppMetrTest {
         
         Queue<BinaryBatch> getBathesQueue() {
             return batchesQueue;
+        }
+    }
+
+    static class DiscardStorage extends HeapStorage {
+        @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException {
+            return false;
         }
     }
 

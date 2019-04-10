@@ -112,6 +112,7 @@ public class AppMetr {
         uploadThread.setUncaughtExceptionHandler((t, e) -> log.error("Uncaught upload exception", e));
         uploadThread.start();
 
+        lastFlushTime = clock.instant();
         stopped = false;
     }
 
@@ -191,7 +192,7 @@ public class AppMetr {
     protected boolean needFlush() {
         return actionsBytes >= maxBatchBytes
                 || (maxBatchActions > 0 && actionList.size() >= maxBatchActions)
-                || Duration.between(clock.instant(), lastFlushTime).compareTo(flushPeriod) >= 0;
+                ||  !clock.instant().minus(flushPeriod).isBefore(lastFlushTime);
     }
 
     protected void upload() {

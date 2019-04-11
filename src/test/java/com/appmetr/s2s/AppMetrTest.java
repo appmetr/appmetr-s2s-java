@@ -28,8 +28,8 @@ import static org.mockito.Mockito.*;
 
 public class AppMetrTest {
 
-    private static String token = "testToken";
-    private static String url = "testUrl";
+    static String token = "testToken";
+    static String url = "testUrl";
 
     AppMetr appMetr = new AppMetr(token, url);
 
@@ -275,7 +275,7 @@ public class AppMetrTest {
     static class NothingBatchSender implements BatchSender {
         static final NothingBatchSender instance = new NothingBatchSender();
 
-        @Override public boolean send(String uri, String token, byte[] batches) {
+        @Override public boolean send(String uri, String token, byte[] batch) {
             try {
                 waitForever();
             } catch (InterruptedException e) {

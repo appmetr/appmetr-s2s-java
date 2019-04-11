@@ -47,7 +47,7 @@ public class HttpBatchSender implements BatchSender {
         this.clock = clock;
     }
 
-    @Override public boolean send(String httpURL, String deploy, byte[] batches) {
+    @Override public boolean send(String httpURL, String deploy, byte[] batch) {
         final HttpURLConnection connection;
         try {
             final URL url = makeUrl(httpURL, deploy);
@@ -64,10 +64,10 @@ public class HttpBatchSender implements BatchSender {
             connection.setDoOutput(true);
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/octet-stream");
-            connection.setFixedLengthStreamingMode(batches.length);
+            connection.setFixedLengthStreamingMode(batch.length);
 
             try (OutputStream out = connection.getOutputStream()) {
-                out.write(batches);
+                out.write(batch);
             }
             
             try (InputStream inputStream = connection.getInputStream()) {
@@ -99,6 +99,10 @@ public class HttpBatchSender implements BatchSender {
     }
 
     protected boolean isError(JsonNode response) {
+        if (response == null) {
+            return true;
+        }
+
         final JsonNode error = response.get("error");
         if (error == null) {
             return false;

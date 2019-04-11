@@ -1,10 +1,11 @@
 package com.appmetr.s2s.sender;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
@@ -12,10 +13,13 @@ class HttpBatchSenderIT {
 
     static String path = "/api";
     static String token = "testToken";
+    static String method = "server.trackS2S";
     static byte[] batch = new byte[]{1};
 
     static WireMockServer wireMockServer;
     static String url;
+
+    static String JSON_OK = "{\"response\": {\"status\": \"OK\"}}";
 
     HttpBatchSender httpBatchSender = new HttpBatchSender();
 
@@ -30,7 +34,7 @@ class HttpBatchSenderIT {
 
     @AfterAll
     static void tearDownAll() {
-        wireMockServer.stop();
+        shutdownServer();
     }
 
     @BeforeEach
@@ -40,10 +44,15 @@ class HttpBatchSenderIT {
 
     @Test
     void send() {
-        stubFor(post(urlPathEqualTo(path)).willReturn(aResponse().withStatus(200)));
+        stubFor(post(urlPathEqualTo(path)).willReturn(okJson(JSON_OK)));
 
-        httpBatchSender.send(url, token, batch);
+        httpBatchSender.setClock(Clock.fixed(Instant.ofEpochSecond(1), ZoneOffset.UTC));
 
-        verify(postRequestedFor(urlPathEqualTo(path)));
+        Assertions.assertTrue(httpBatchSender.send(url, token, batch));
+
+        verify(postRequestedFor(urlPathEqualTo(path))
+                .withQueryParam("method", equalTo(method))
+                .withQueryParam("token", equalTo(token))
+                .withQueryParam("timestamp", equalTo("1000")));
     }
 }

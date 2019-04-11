@@ -20,6 +20,8 @@ class HttpBatchSenderIT {
     static String url;
 
     static String JSON_OK = "{\"response\": {\"status\": \"OK\"}}";
+    static String JSON_ERROR = "{\"error\": {\"code\": 500, \"message\": \"test error\"}}";
+    static String JSON_OCCASIONAL = "{\"memo\": 8}";
 
     HttpBatchSender httpBatchSender = new HttpBatchSender();
 
@@ -43,7 +45,7 @@ class HttpBatchSenderIT {
     }
 
     @Test
-    void send() {
+    void response200() {
         stubFor(post(urlPathEqualTo(path)).willReturn(okJson(JSON_OK)));
 
         httpBatchSender.setClock(Clock.fixed(Instant.ofEpochSecond(1), ZoneOffset.UTC));
@@ -54,5 +56,50 @@ class HttpBatchSenderIT {
                 .withQueryParam("method", equalTo(method))
                 .withQueryParam("token", equalTo(token))
                 .withQueryParam("timestamp", equalTo("1000")));
+    }
+
+    @Test
+    void response404() {
+        stubFor(post(urlPathEqualTo(path)).willReturn(aResponse().withStatus(404)));
+
+        Assertions.assertFalse(httpBatchSender.send(url, token, batch));
+
+        verify(postRequestedFor(urlPathEqualTo(path)));
+    }
+
+    @Test
+    void response200_with_error() {
+        stubFor(post(urlPathEqualTo(path)).willReturn(okJson(JSON_ERROR)));
+
+        Assertions.assertFalse(httpBatchSender.send(url, token, batch));
+
+        verify(postRequestedFor(urlPathEqualTo(path)));
+    }
+
+    @Test
+    void response200_empty() {
+        stubFor(post(urlPathEqualTo(path)).willReturn(ok()));
+
+        Assertions.assertFalse(httpBatchSender.send(url, token, batch));
+
+        verify(postRequestedFor(urlPathEqualTo(path)));
+    }
+
+    @Test
+    void response200_body_is_not_json() {
+        stubFor(post(urlPathEqualTo(path)).willReturn(ok("wrong body")));
+
+        Assertions.assertFalse(httpBatchSender.send(url, token, batch));
+
+        verify(postRequestedFor(urlPathEqualTo(path)));
+    }
+
+    @Test
+    void response200_wrong_json() {
+        stubFor(post(urlPathEqualTo(path)).willReturn(okJson(JSON_OCCASIONAL)));
+
+        Assertions.assertFalse(httpBatchSender.send(url, token, batch));
+
+        verify(postRequestedFor(urlPathEqualTo(path)));
     }
 }

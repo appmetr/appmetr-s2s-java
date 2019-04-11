@@ -69,25 +69,24 @@ public class HttpBatchSender implements BatchSender {
             try (OutputStream out = connection.getOutputStream()) {
                 out.write(batch);
             }
-            
+
             try (InputStream inputStream = connection.getInputStream()) {
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                     return false;
                 }
-
                 final String result = readStream(inputStream);
                 final JsonNode responseJson = objectMapper.readTree(result);
+                final JsonNode status = status(responseJson);
 
-                JsonNode status = null;
-                if (!isError(responseJson)) {
-                    status = responseJson.get("response").get("status");
+                if (status == null) {
+                    log.error("Unknown server response '{}'", result);
+                    return false;
                 }
-
-                if (status != null && "OK".equalsIgnoreCase(status.textValue())) {
+                if ("OK".equalsIgnoreCase(status.textValue())) {
                     return true;
                 }
             } catch (JsonParseException jsonError) {
-                log.error("Json exception", jsonError);
+                log.error("Cannot parse json", jsonError);
             }
         } catch (Exception e) {
             log.warn("Request exception", e);
@@ -98,27 +97,37 @@ public class HttpBatchSender implements BatchSender {
         return false;
     }
 
-    protected boolean isError(JsonNode response) {
+    protected JsonNode status(JsonNode response) {
         if (response == null) {
-            return true;
+            return null;
         }
 
         final JsonNode error = response.get("error");
         if (error == null) {
-            return false;
+            final JsonNode resp = response.get("response");
+            if (resp == null) {
+                return null;
+            }
+
+            return resp.get("status");
         }
 
+        log.error("Batch sending has been failed with error");
+
+        final JsonNode code = error.get("code");
+        if (code != null) {
+            log.error("code: {}", code);
+        }
         final JsonNode message = error.get("message");
         if (message != null) {
-            log.error("Can't send batch: {}", message.asText());
+            log.error("message: {}", message.asText());
         }
-
         final JsonNode stackTrace = error.get("stackTrace");
         if (stackTrace != null) {
-            log.error(stackTrace.asText());
+            log.error("stackTrace:\n{}", stackTrace.asText());
         }
 
-        return true;
+        return error;
     }
 
     protected URL makeUrl(String httpURL, String token) throws MalformedURLException {

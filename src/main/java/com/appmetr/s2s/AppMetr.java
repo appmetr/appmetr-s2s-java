@@ -32,7 +32,7 @@ public class AppMetr {
 
     protected boolean stopped = true;
     protected long actionsBytes;
-    protected Instant lastFlushTime = Instant.MAX;
+    protected Instant lastFlushTime;
     protected ArrayList<Action> actionList = new ArrayList<>();
     protected Thread uploadThread;
 

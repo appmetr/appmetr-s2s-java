@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,8 +21,10 @@ import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class AppMetrTest {
 
@@ -148,6 +151,31 @@ public class AppMetrTest {
         assertFalse(appMetr.track(event2));
 
         appMetr.stop();
+    }
+
+    @Test
+    void senderSuccess() throws IOException, InterruptedException {
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
+        when(mockSender.send(eq(url), eq(token), any())).thenReturn(true);
+
+        final TestStorage testStorage = new TestStorage();
+
+        final AppMetr appMetr = new AppMetr(token, url);
+        appMetr.setServerId("s1");
+        appMetr.setBatchSender(mockSender);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.start();
+
+        assertTrue(appMetr.track(new Event("test1")));
+
+        appMetr.flush();
+        Thread.sleep(1);
+
+        verify(mockSender).send(eq(url), eq(token), any());
+
+        appMetr.stop();
+
+        assertTrue(testStorage.getBathesQueue().isEmpty());
     }
 
     private static Object getRandomObject() {

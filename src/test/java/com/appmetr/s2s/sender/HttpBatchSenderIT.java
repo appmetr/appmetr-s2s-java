@@ -115,6 +115,6 @@ class HttpBatchSenderIT {
 
     @Test
     void malformedUrl() {
-        Assertions.assertFalse(httpBatchSender.send("mmm://test", token, batch));
+        Assertions.assertThrows(RuntimeException.class, () -> httpBatchSender.send("mmm://test", token, batch));
     }
 }

@@ -35,6 +35,7 @@ public class AppMetr {
     protected Instant lastFlushTime;
     protected ArrayList<Action> actionList = new ArrayList<>();
     protected Thread uploadThread;
+    protected Throwable lastThrowable;
 
     protected AppMetr() {
     }
@@ -113,6 +114,7 @@ public class AppMetr {
         uploadThread.start();
 
         lastFlushTime = clock.instant();
+        lastThrowable = null;
         stopped = false;
     }
 
@@ -141,9 +143,7 @@ public class AppMetr {
      * @return {@code true} if an Action has been tracked successfully or {@code false} if no space is currently available.
      */
     public synchronized boolean track(Action newAction) throws InterruptedException, IOException {
-        if (stopped) {
-            throw new IllegalStateException("Cannot track because stopped");
-        }
+        checkState();
 
         if (needFlush()) {
             if (!flush()) {
@@ -157,13 +157,19 @@ public class AppMetr {
         return true;
     }
 
+    protected void checkState() {
+        if (stopped) {
+            throw new IllegalStateException("Appmetr is in stopped state", lastThrowable);
+        }
+    }
+
     /**
      * Can blocks until a storage space become available regardless BatchStorage implementation
      * @return {@code true} if the actions was added to this storage, else
      *         {@code false}
      */
     public synchronized boolean flush() throws InterruptedException, IOException {
-        log.trace("Flushing started for {} actions", actionList.size());
+        log.trace("Flushing {} actions", actionList.size());
 
         if (actionList.isEmpty()) {
             log.debug("Nothing to flush");
@@ -184,6 +190,8 @@ public class AppMetr {
     }
 
     public synchronized void flushIfNeeded() throws InterruptedException, IOException {
+        checkState();
+        
         if (needFlush()) {
             flush();
         }
@@ -228,9 +236,11 @@ public class AppMetr {
                 boolean result;
                 try {
                     result = batchSender.send(url, token, binaryBatch.getBytes());
-                } catch (Exception e) {
-                    log.warn("Exception while sending the batch {}", binaryBatch.getBatchId(), e);
-                    result = false;
+                } catch (Throwable e) {
+                    log.error("Unexpected exception while sending the batch {}", binaryBatch.getBatchId(), e);
+                    lastThrowable = e;
+                    stopped = true;
+                    return;
                 }
 
                 log.debug("Batch {} {} finished. Took {}", binaryBatch.getBatchId(), result ? "" : "NOT", Duration.between(batchUploadStart, clock.instant()));

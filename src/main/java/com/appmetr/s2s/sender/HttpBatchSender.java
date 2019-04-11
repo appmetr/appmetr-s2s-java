@@ -53,8 +53,9 @@ public class HttpBatchSender implements BatchSender {
             final URL url = makeUrl(httpURL, deploy);
             connection = (HttpURLConnection) url.openConnection();
         } catch (IOException e) {
-            log.error("Connection creation exception to {} and '{}'", httpURL, deploy, e);
-            return false;
+            log.error("Connection creation exception to {} and '{}'", httpURL, deploy);
+            throw new IllegalArgumentException(
+                    "Wrong url '" + httpURL + "' or deploy '" + deploy + "' or method '" + serverMethodName + "'", e);
         }
 
         try {

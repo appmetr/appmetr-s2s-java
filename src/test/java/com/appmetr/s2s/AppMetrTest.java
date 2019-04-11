@@ -212,7 +212,6 @@ public class AppMetrTest {
         assertTrue(appMetr.track(new Event("test1")));
 
         appMetr.flush();
-        Thread.sleep(2);
 
         verify(mockSender, timeout(100)).send(eq(url), eq(token), any());
 
@@ -221,30 +220,22 @@ public class AppMetrTest {
         assertTrue(testStorage.getBathesQueue().isEmpty());
     }
 
-    private static Object getRandomObject() {
-        Random random = new Random();
-        int switcher = random.nextInt(5);
-        switch (switcher) {
-            case 0: return "2012-08-21";
-            case 1: return random.nextBoolean();
-            case 2:
-                ArrayList<Integer> randomList = new ArrayList<>(5);
-                for (int i = 0; i < 5; i++) {
-                    randomList.add(random.nextInt());
-                }
-                return randomList;
-            case 3: return random.nextDouble();
-            case 4: return generateString(random, "abcdefght", 8);
-            default: return "DEFAULT";
-        }
-    }
+    @Test
+    void senderException() throws IOException, InterruptedException {
+        final TestStorage testStorage = new TestStorage();
 
-    private static String generateString(Random rng, String characters, int length) {
-        char[] text = new char[length];
-        for (int i = 0; i < length; i++) {
-            text[i] = characters.charAt(rng.nextInt(characters.length()));
-        }
-        return new String(text);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.setFailedUploadTimeout(Duration.ofMillis(10));
+        appMetr.start();
+
+        assertTrue(appMetr.track(new Event("test1")));
+
+        appMetr.flush();
+        Thread.sleep(10);
+
+        assertThrows(RuntimeException.class, () -> appMetr.track(new Event("test2")));
+
+        assertFalse(testStorage.getBathesQueue().isEmpty());
     }
 
     static void waitForever() throws InterruptedException {

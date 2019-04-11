@@ -14,7 +14,7 @@ class HttpBatchSenderIT {
     static String path = "/api";
     static String token = "testToken";
     static String method = "server.trackS2S";
-    static byte[] batch = new byte[]{1};
+    static byte[] batch = new byte[]{1, 2};
 
     static WireMockServer wireMockServer;
     static String url;
@@ -55,12 +55,13 @@ class HttpBatchSenderIT {
         verify(postRequestedFor(urlPathEqualTo(path))
                 .withQueryParam("method", equalTo(method))
                 .withQueryParam("token", equalTo(token))
-                .withQueryParam("timestamp", equalTo("1000")));
+                .withQueryParam("timestamp", equalTo("1000"))
+                .withRequestBody(binaryEqualTo(new byte[]{1, 2})));
     }
 
     @Test
     void response404() {
-        stubFor(post(urlPathEqualTo(path)).willReturn(aResponse().withStatus(404)));
+        stubFor(post(urlPathEqualTo(path)).willReturn(status(404)));
 
         Assertions.assertFalse(httpBatchSender.send(url, token, batch));
 
@@ -101,5 +102,19 @@ class HttpBatchSenderIT {
         Assertions.assertFalse(httpBatchSender.send(url, token, batch));
 
         verify(postRequestedFor(urlPathEqualTo(path)));
+    }
+
+    @Test
+    void wrongUrl() {
+        stubFor(post(urlPathEqualTo(path)).willReturn(okJson(JSON_OCCASIONAL)));
+
+        Assertions.assertFalse(httpBatchSender.send("http://unknown_address/api", token, batch));
+
+        verify(0, postRequestedFor(urlPathEqualTo(path)));
+    }
+
+    @Test
+    void malformedUrl() {
+        Assertions.assertFalse(httpBatchSender.send("mmm://test", token, batch));
     }
 }

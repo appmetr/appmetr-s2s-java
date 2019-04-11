@@ -67,7 +67,7 @@
             <version>2.22.0</version>
             <scope>test</scope>
         </dependency>
-        <!-- for wiremock only -->
+        <!-- required for wiremock -->
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-junit</artifactId>

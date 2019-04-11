@@ -17,7 +17,7 @@ public class AppMetr {
 
     protected String token;
     protected String url;
-    protected boolean retryBatchUpload;
+    protected boolean retryBatchUpload = true;
     protected String serverId = UUID.randomUUID().toString();
     protected Clock clock = Clock.systemUTC();
     protected BatchStorage batchStorage = new HeapStorage();

@@ -23,8 +23,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class AppMetrTest {
 
@@ -43,10 +42,9 @@ public class AppMetrTest {
         assertTrue(appMetr.track(new Event("test1")));
 
         appMetr.flush();
-        Thread.sleep(1);
 
         ArgumentCaptor<byte[]> batch1 = ArgumentCaptor.forClass(byte[].class);
-        verify(mockSender).send(eq(url), eq(token), batch1.capture());
+        verify(mockSender, timeout(100)).send(eq(url), eq(token), batch1.capture());
         final JsonNode batchNode = GzippedJsonBatchFactoryTest.decompress(batch1.getValue());
         assertEquals("s1", batchNode.get("serverId").asText());
         final ArrayNode events = (ArrayNode) batchNode.get("batch");
@@ -169,13 +167,36 @@ public class AppMetrTest {
         assertTrue(appMetr.track(new Event("test1")));
 
         appMetr.flush();
-        Thread.sleep(1);
 
-        verify(mockSender).send(eq(url), eq(token), any());
+        verify(mockSender, timeout(100)).send(eq(url), eq(token), any());
 
         appMetr.stop();
 
         assertTrue(testStorage.getBathesQueue().isEmpty());
+    }
+
+    @Test
+    void senderFail() throws IOException, InterruptedException {
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
+
+        final TestStorage testStorage = new TestStorage();
+
+        final AppMetr appMetr = new AppMetr(token, url);
+        appMetr.setServerId("s1");
+        appMetr.setBatchSender(mockSender);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.setUploadRetryTimeout(Duration.ofMillis(1));
+        appMetr.start();
+
+        assertTrue(appMetr.track(new Event("test1")));
+
+        appMetr.flush();
+
+        verify(mockSender, timeout(100).atLeast(2)).send(eq(url), eq(token), any());
+        
+        appMetr.stop();
+
+        assertFalse(testStorage.getBathesQueue().isEmpty());
     }
 
     private static Object getRandomObject() {

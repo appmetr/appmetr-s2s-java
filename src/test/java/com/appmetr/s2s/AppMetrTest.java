@@ -9,6 +9,7 @@ import com.appmetr.s2s.persister.HeapStorage;
 import com.appmetr.s2s.sender.BatchSender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -30,12 +31,17 @@ public class AppMetrTest {
     private static String token = "testToken";
     private static String url = "testUrl";
 
+    AppMetr appMetr = new AppMetr(token, url);
+
+    @BeforeEach
+    void setUp() {
+        appMetr.setServerId("s1");
+    }
+
     @Test
     void sendManually() throws Exception {
         final BatchSender mockSender = Mockito.mock(BatchSender.class);
 
-        final AppMetr appMetr = new AppMetr(token, url);
-        appMetr.setServerId("s1");
         appMetr.setBatchSender(mockSender);
         appMetr.start();
 
@@ -61,7 +67,6 @@ public class AppMetrTest {
     void storeByBatchActions() throws Exception {
         final TestStorage testStorage = new TestStorage();
 
-        final AppMetr appMetr = new AppMetr(token, url);
         appMetr.setBatchSender(NothingBatchSender.instance);
         appMetr.setBatchStorage(testStorage);
         appMetr.setMaxBatchActions(1);
@@ -85,7 +90,6 @@ public class AppMetrTest {
     void storeByBatchBytes() throws Exception {
         final TestStorage testStorage = new TestStorage();
 
-        final AppMetr appMetr = new AppMetr(token, url);
         appMetr.setBatchSender(NothingBatchSender.instance);
         appMetr.setBatchStorage(testStorage);
         appMetr.setMaxBatchBytes(1);
@@ -109,7 +113,6 @@ public class AppMetrTest {
     void storeByTime() throws Exception {
         final TestStorage testStorage = new TestStorage();
 
-        final AppMetr appMetr = new AppMetr(token, url);
         appMetr.setBatchSender(NothingBatchSender.instance);
         appMetr.setBatchStorage(testStorage);
         appMetr.setFlushPeriod(Duration.ofSeconds(1));
@@ -137,7 +140,6 @@ public class AppMetrTest {
     void storeDiscarded() throws Exception {
         final DiscardStorage testStorage = new DiscardStorage();
 
-        final AppMetr appMetr = new AppMetr(token, url);
         appMetr.setBatchSender(NothingBatchSender.instance);
         appMetr.setBatchStorage(testStorage);
         appMetr.setMaxBatchActions(1);
@@ -158,8 +160,6 @@ public class AppMetrTest {
 
         final TestStorage testStorage = new TestStorage();
 
-        final AppMetr appMetr = new AppMetr(token, url);
-        appMetr.setServerId("s1");
         appMetr.setBatchSender(mockSender);
         appMetr.setBatchStorage(testStorage);
         appMetr.start();
@@ -181,11 +181,9 @@ public class AppMetrTest {
 
         final TestStorage testStorage = new TestStorage();
 
-        final AppMetr appMetr = new AppMetr(token, url);
-        appMetr.setServerId("s1");
         appMetr.setBatchSender(mockSender);
         appMetr.setBatchStorage(testStorage);
-        appMetr.setUploadRetryTimeout(Duration.ofMillis(1));
+        appMetr.setFailedUploadTimeout(Duration.ofMillis(10));
         appMetr.start();
 
         assertTrue(appMetr.track(new Event("test1")));
@@ -199,6 +197,30 @@ public class AppMetrTest {
         assertFalse(testStorage.getBathesQueue().isEmpty());
     }
 
+    @Test
+    void senderFailDoNotRetryUpload() throws IOException, InterruptedException {
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
+
+        final TestStorage testStorage = new TestStorage();
+
+        appMetr.setBatchSender(mockSender);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.setFailedUploadTimeout(Duration.ofMillis(1));
+        appMetr.setRetryBatchUpload(false);
+        appMetr.start();
+
+        assertTrue(appMetr.track(new Event("test1")));
+
+        appMetr.flush();
+        Thread.sleep(2);
+
+        verify(mockSender, timeout(100)).send(eq(url), eq(token), any());
+
+        appMetr.stop();
+
+        assertTrue(testStorage.getBathesQueue().isEmpty());
+    }
+
     private static Object getRandomObject() {
         Random random = new Random();
         int switcher = random.nextInt(5);
@@ -206,7 +228,7 @@ public class AppMetrTest {
             case 0: return "2012-08-21";
             case 1: return random.nextBoolean();
             case 2:
-                ArrayList<Integer> randomList = new ArrayList<Integer>(5);
+                ArrayList<Integer> randomList = new ArrayList<>(5);
                 for (int i = 0; i < 5; i++) {
                     randomList.add(random.nextInt());
                 }

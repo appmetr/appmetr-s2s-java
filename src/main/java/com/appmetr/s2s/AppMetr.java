@@ -28,7 +28,7 @@ public class AppMetr {
     protected long maxBatchBytes = 1024 * 1024;
     protected Duration flushPeriod = Duration.ofMinutes(1);
     protected Duration readRetryTimeout = Duration.ofSeconds(3);
-    protected Duration uploadRetryTimeout = Duration.ofSeconds(1);
+    protected Duration failedUploadTimeout = Duration.ofSeconds(1);
 
     protected boolean stopped = true;
     protected long actionsBytes;
@@ -100,8 +100,8 @@ public class AppMetr {
         this.readRetryTimeout = readRetryTimeout;
     }
 
-    public void setUploadRetryTimeout(Duration uploadRetryTimeout) {
-        this.uploadRetryTimeout = uploadRetryTimeout;
+    public void setFailedUploadTimeout(Duration failedUploadTimeout) {
+        this.failedUploadTimeout = failedUploadTimeout;
     }
 
     /**
@@ -246,7 +246,7 @@ public class AppMetr {
                 log.error("Error while uploading batch {}", binaryBatch.getBatchId());
 
                 try {
-                    Thread.sleep(uploadRetryTimeout.toMillis());
+                    Thread.sleep(failedUploadTimeout.toMillis());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;

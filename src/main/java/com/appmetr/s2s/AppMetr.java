@@ -189,12 +189,15 @@ public class AppMetr {
         return stored;
     }
 
-    public synchronized void flushIfNeeded() throws InterruptedException, IOException {
+    public synchronized boolean flushIfNeeded() throws InterruptedException, IOException {
         checkState();
         
         if (needFlush()) {
             flush();
+            return true;
         }
+
+        return false;
     }
 
     protected boolean needFlush() {

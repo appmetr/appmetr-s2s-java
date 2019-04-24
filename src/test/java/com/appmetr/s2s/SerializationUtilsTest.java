@@ -32,7 +32,7 @@ public class SerializationUtilsTest {
     @Test()
     public void serializePayment() throws Exception {
         Batch original = new Batch("s1", 2, Collections.singletonList(
-                new Payment("order1", "trans1", "proc1", "USD", "123")));
+                new Payment("order1", "trans1", "proc1", "USD", "123", null, null, null, true)));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
         System.out.println(deserialized);

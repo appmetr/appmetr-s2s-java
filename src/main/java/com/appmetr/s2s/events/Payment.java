@@ -1,5 +1,7 @@
 package com.appmetr.s2s.events;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 
 public class Payment extends Action {
@@ -13,7 +15,8 @@ public class Payment extends Action {
     private String appCurrencyCode;
     private String appCurrencyAmount;
     private String psUserStoreCountryCode;
-    private Boolean isSandbox;
+    @JsonProperty("isSandbox")
+    private Boolean sandbox;
 
     //Only for Jackson deserialization
     private Payment() {
@@ -42,7 +45,7 @@ public class Payment extends Action {
                    String appCurrencyCode,
                    String appCurrencyAmount,
                    String psUserStoreCountryCode,
-                   Boolean isSandbox) {
+                   Boolean sandbox) {
         this();
 
         this.orderId = orderId;
@@ -53,7 +56,7 @@ public class Payment extends Action {
         this.appCurrencyCode = appCurrencyCode;
         this.appCurrencyAmount = appCurrencyAmount;
         this.psUserStoreCountryCode = psUserStoreCountryCode;
-        this.isSandbox = isSandbox;
+        this.sandbox = sandbox;
     }
 
     public String getOrderId() {
@@ -89,7 +92,7 @@ public class Payment extends Action {
     }
 
     public Boolean getSandbox() {
-        return isSandbox;
+        return sandbox;
     }
 
     @Override public int calcApproximateSize() {
@@ -136,7 +139,7 @@ public class Payment extends Action {
                 ", appCurrencyCode='" + getAppCurrencyCode() + '\'' +
                 ", appCurrencyAmount='" + getAppCurrencyAmount() + '\'' +
                 ", psUserStoreCountryCode='" + getPsUserStoreCountryCode() + '\'' +
-                ", isSandbox=" + getSandbox() +
+                ", sandbox=" + getSandbox() +
                 "} " + super.toString();
     }
 }

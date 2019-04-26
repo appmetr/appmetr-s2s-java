@@ -13,8 +13,8 @@ public abstract class Action {
     private long timestamp = new Date().getTime();
     private Map<String, Object> properties = new HashMap<String, Object>();
     private String userId;
-    @JsonProperty("$originalTime")
-    private long originalTime;
+    @JsonProperty("$userTime")
+    private long userTime;
 
     public Action(String action) {
         this.action = action;
@@ -43,11 +43,11 @@ public abstract class Action {
     }
 
     public long getTimestamp() {
-        return originalTime == 0 ? timestamp : originalTime;
+        return userTime == 0 ? timestamp : userTime;
     }
 
     public Action setTimestamp(long timestamp) {
-        this.originalTime = timestamp;
+        this.userTime = timestamp;
         return this;
     }
 
@@ -88,7 +88,7 @@ public abstract class Action {
         return "Action{" +
                 "action='" + getAction() + '\'' +
                 ", timestamp=" + Instant.ofEpochMilli(timestamp) +
-                ", originalTime=" + Instant.ofEpochMilli(getTimestamp()) +
+                ", userTime=" + Instant.ofEpochMilli(getTimestamp()) +
                 ", properties=" + getProperties() +
                 ", userId='" + getUserId() + '\'' +
                 '}';

@@ -60,10 +60,12 @@ public class SerializationUtilsTest {
         assertEquals(8, event.getTimestamp());
 
         Batch original = new Batch("s1", 2, Collections.singletonList(event));
-        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
-        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(deserialized);
-        assertEquals(original, deserialized);
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
+        final JsonNode jsonNode = decompress(bytes);
+        System.out.println(jsonNode);
+
+        final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
+        assertEquals(8, batchNode.get(0).get("$userTime").asLong());
     }
 
     @Test
@@ -75,7 +77,7 @@ public class SerializationUtilsTest {
         System.out.println(jsonNode);
 
         final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
-        assertNull(batchNode.get(0).get("$originalTime"));
+        assertNull(batchNode.get(0).get("$userTime"));
     }
 
     public static JsonNode decompress(byte[] compressedBody) throws IOException {

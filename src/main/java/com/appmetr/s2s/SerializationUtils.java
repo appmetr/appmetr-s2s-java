@@ -1,7 +1,9 @@
 package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Action;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -29,7 +31,10 @@ public class SerializationUtils {
     public static final ObjectMapper objectMapperTyped;
 
     static {
-        objectMapper = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_DEFAULT);
+        objectMapper = new ObjectMapper()
+                .setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+                .setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
+                .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         objectMapperTyped = objectMapper.copy();
         final SimpleModule module = new SimpleModule();
         module.addSerializer(Action.class, new ActionJsonSerializer());

@@ -54,7 +54,7 @@ public class SerializationUtilsTest {
     }
 
     @Test()
-    public void serializeOriginalTime() throws Exception {
+    public void serializeUserTime() throws Exception {
         final Event event = new Event("test");
         event.setTimestamp(8);
         assertEquals(8, event.getTimestamp());

@@ -29,7 +29,7 @@ public class SerializationUtils {
     private static final ObjectMapper objectMapperTyped;
 
     static {
-        objectMapper = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        objectMapper = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_DEFAULT);
         objectMapperTyped = objectMapper.copy();
         final SimpleModule module = new SimpleModule();
         module.addSerializer(Action.class, new ActionJsonSerializer());

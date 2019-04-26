@@ -1,11 +1,10 @@
 package com.appmetr.s2s.persister;
 
 import com.appmetr.s2s.BinaryBatch;
+import com.appmetr.s2s.SerializationUtils;
 import com.appmetr.s2s.events.Level;
 import com.appmetr.s2s.events.Payment;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.jupiter.api.Test;
 
@@ -21,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GzippedJsonBatchFactoryTest {
-
-    private static ObjectMapper jackson = new ObjectMapper().configure(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, true);
 
     @Test
     void createBatch() throws Exception {
@@ -50,7 +47,7 @@ public class GzippedJsonBatchFactoryTest {
         try (InflaterOutputStream inflateStream = new InflaterOutputStream(inflatedByteStream, inflater)) {
             inflateStream.write(compressedBody);
             inflateStream.finish();
-            return jackson.readTree(inflatedByteStream.toString(StandardCharsets.UTF_8.name()));
+            return SerializationUtils.objectMapper.readTree(inflatedByteStream.toString(StandardCharsets.UTF_8.name()));
         } finally {
             inflater.end();
         }

@@ -25,8 +25,8 @@ public class SerializationUtils {
 
     private static final String CLASS_NAME = "cls";
     private static final String INSTANCE = "inst";
-    private static final ObjectMapper objectMapper;
-    private static final ObjectMapper objectMapperTyped;
+    public static final ObjectMapper objectMapper;
+    public static final ObjectMapper objectMapperTyped;
 
     static {
         objectMapper = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_DEFAULT);

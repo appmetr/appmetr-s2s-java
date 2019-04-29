@@ -1,7 +1,5 @@
 package com.appmetr.s2s.events;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
@@ -13,7 +11,6 @@ public abstract class Action {
     private long timestamp = new Date().getTime();
     private Map<String, Object> properties = new HashMap<String, Object>();
     private String userId;
-    @JsonProperty("$userTime")
     private long userTime;
 
     public Action(String action) {

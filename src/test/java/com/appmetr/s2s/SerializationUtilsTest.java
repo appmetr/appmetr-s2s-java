@@ -65,7 +65,7 @@ public class SerializationUtilsTest {
         System.out.println(jsonNode);
 
         final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
-        assertEquals(8, batchNode.get(0).get("$userTime").asLong());
+        assertEquals(8, batchNode.get(0).get("userTime").asLong());
     }
 
     @Test

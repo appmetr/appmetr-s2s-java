@@ -11,6 +11,7 @@ public abstract class Action {
     private long timestamp = new Date().getTime();
     private Map<String, Object> properties = new HashMap<String, Object>();
     private String userId;
+    private long userTime;
 
     public Action(String action) {
         this.action = action;
@@ -39,11 +40,11 @@ public abstract class Action {
     }
 
     public long getTimestamp() {
-        return timestamp;
+        return userTime == 0 ? timestamp : userTime;
     }
 
     public Action setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+        this.userTime = timestamp;
         return this;
     }
 
@@ -83,7 +84,8 @@ public abstract class Action {
     @Override public String toString() {
         return "Action{" +
                 "action='" + getAction() + '\'' +
-                ", timestamp=" + Instant.ofEpochMilli(getTimestamp()) +
+                ", timestamp=" + Instant.ofEpochMilli(timestamp) +
+                ", userTime=" + Instant.ofEpochMilli(getTimestamp()) +
                 ", properties=" + getProperties() +
                 ", userId='" + getUserId() + '\'' +
                 '}';

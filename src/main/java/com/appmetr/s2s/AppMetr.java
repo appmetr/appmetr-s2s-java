@@ -1,6 +1,7 @@
 package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Action;
+import com.appmetr.s2s.events.Event;
 import com.appmetr.s2s.persister.BatchPersister;
 import com.appmetr.s2s.persister.FileBatchPersister;
 import com.appmetr.s2s.persister.MemoryBatchPersister;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
@@ -71,6 +73,12 @@ public class AppMetr {
 
     public AppMetr(String token, String url) {
         this(token, url, new MemoryBatchPersister());
+    }
+
+    public void trackServerInstall(String userId) {
+        Event install = new Event("server/server_install");
+        install.setUserId(userId);
+        track(install);
     }
 
     public void track(Action newAction) {

@@ -47,8 +47,7 @@ public class SerializationUtilsTest {
 
     @Test
     public void serializeServerInstall() {
-        Action install = Events.serverInstall()
-                .setUserId("testUser")
+        Action install = Events.serverInstall("testUser")
                 .setProperties(singletonMap("game", "wr"));
         Batch original = new Batch("s1", 1, singletonList(install));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);

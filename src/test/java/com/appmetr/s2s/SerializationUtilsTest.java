@@ -47,7 +47,7 @@ public class SerializationUtilsTest {
 
     @Test
     public void serializeServerInstall() {
-        Action install = ServerInstall.create()
+        Action install = Events.serverInstall()
                 .setUserId("testUser")
                 .setProperties(singletonMap("game", "wr"));
         Batch original = new Batch("s1", 1, singletonList(install));

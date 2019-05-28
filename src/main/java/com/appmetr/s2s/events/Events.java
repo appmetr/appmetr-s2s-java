@@ -1,8 +1,8 @@
 package com.appmetr.s2s.events;
 
-public class ServerInstall {
+public class Events {
 
-    public static Action create() {
+    public static Action serverInstall() {
         return new Event("server/server_install");
     }
 }

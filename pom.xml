@@ -6,14 +6,14 @@
     <groupId>com.appmetr</groupId>
     <artifactId>appmetr-s2s-java</artifactId>
     <packaging>jar</packaging>
-    <version>0.2.5</version>
+    <version>0.2.6-SNAPSHOT</version>
     <name>appmetr-s2s-java</name>
 
     <scm>
         <connection>scm:git:ssh://git@github.com/appmetr/appmetr-s2s-java.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/appmetr/appmetr-s2s-java.git</developerConnection>
         <url>http://github.com/appmetr/appmetr-s2s-java</url>
-        <tag>appmetr-s2s-java-0.2.5</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>

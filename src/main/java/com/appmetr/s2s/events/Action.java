@@ -9,7 +9,7 @@ import java.util.Objects;
 public abstract class Action {
     private String action;
     private long timestamp = new Date().getTime();
-    private Map<String, Object> properties = new HashMap<String, Object>();
+    private Map<String, Object> properties = new HashMap<>();
     private String userId;
     private long userTime;
 
@@ -64,7 +64,7 @@ public abstract class Action {
     }
 
     protected int getStringLength(String str) {
-        return str == null ? 0 : str.length() * 2 + 24 + 16;    //24 - String object size, 16 - char[]
+        return str == null ? 0 : str.length() * Character.BYTES + 24 + 16;    //24 - String object size, 16 - char[]
     }
 
     @Override public boolean equals(Object o) {

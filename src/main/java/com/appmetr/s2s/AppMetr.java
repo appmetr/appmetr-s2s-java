@@ -1,211 +1,311 @@
 package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Action;
-import com.appmetr.s2s.persister.BatchPersister;
-import com.appmetr.s2s.persister.FileBatchPersister;
-import com.appmetr.s2s.persister.MemoryBatchPersister;
+import com.appmetr.s2s.persister.*;
+import com.appmetr.s2s.sender.HttpBatchSender;
+import com.appmetr.s2s.sender.BatchSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.*;
 import java.util.ArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.UUID;
 
 public class AppMetr {
     private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
 
-    private static final int MILLIS_PER_MINUTE = 1000 * 60;
-    private static final long FLUSH_PERIOD = MILLIS_PER_MINUTE / 2;
-    private static final long UPLOAD_PERIOD = MILLIS_PER_MINUTE / 2;
-    private static final long MAX_EVENTS_SIZE = FileBatchPersister.REBATCH_THRESHOLD_FILE_SIZE;
-    private static final int MAX_EVENTS_COUNT = FileBatchPersister.REBATCH_THRESHOLD_ITEM_COUNT;
+    protected String token;
+    protected String url;
+    protected boolean retryBatchUpload = true;
+    protected String serverId = UUID.randomUUID().toString();
+    protected Clock clock = Clock.systemUTC();
+    protected BatchStorage batchStorage = new HeapStorage();
+    protected BatchSender batchSender = new HttpBatchSender();
+    protected BatchFactoryServerId batchFactory = GzippedJsonBatchFactory.instance;
 
-    private final String token;
-    private final String url;
-    private final BatchPersister batchPersister;
-    private final ScheduledExecutorService flushExecutor;
-    private final ScheduledExecutorService uploadExecutor;
-    private final boolean needFlushShutdown;
-    private final boolean needUploadShutdown;
-    private final HttpRequestService httpRequestService = createHttpRequestService();
-    private volatile boolean stopped = false;
+    protected int maxBatchActions = 1000;
+    protected long maxBatchBytes = 1024 * 1024;
+    protected Duration flushPeriod = Duration.ofMinutes(1);
+    protected Duration readRetryTimeout = Duration.ofSeconds(3);
+    protected Duration failedUploadTimeout = Duration.ofSeconds(1);
 
-    private long eventsSize;
-    private ArrayList<Action> actionList = new ArrayList<>();
-    private final Lock listLock = new ReentrantLock();
+    protected boolean stopped = true;
+    protected boolean forcedStop;
+    protected long actionsBytes;
+    protected Instant lastFlushTime;
+    protected ArrayList<Action> actionList = new ArrayList<>();
+    protected Thread uploadThread;
+    protected Throwable lastThrowable;
 
-    private final ScheduledAndForced flushSchedule;
-    private final ScheduledAndForced uploadSchedule;
-    private final boolean retryBatchUpload;
-
-    public AppMetr(String token, String url, BatchPersister persister) {
-        this(token, url, persister,
-                Executors.newSingleThreadScheduledExecutor(), true,
-                Executors.newSingleThreadScheduledExecutor(), true, true);
-    }
-
-    public AppMetr(String token, String url, BatchPersister persister,
-                   ScheduledExecutorService flushExecutor, boolean needFlushShutdown,
-                   ScheduledExecutorService uploadExecutor, boolean needUploadShutdown,
-                   boolean retryBatchUpload) {
-        this.url = url;
-        this.token = token;
-        this.batchPersister = persister;
-        this.retryBatchUpload = retryBatchUpload;
-        this.flushExecutor = flushExecutor;
-        this.needFlushShutdown = needFlushShutdown;
-        if (uploadExecutor != null) {
-            this.uploadExecutor = uploadExecutor;
-            this.needUploadShutdown = needUploadShutdown;
-        } else {
-            this.uploadExecutor = flushExecutor;
-            this.needUploadShutdown = false;
-        }
-
-        flushSchedule = new ScheduledAndForced(this.flushExecutor, this::flush, getFlushPeriod());
-        uploadSchedule = new ScheduledAndForced(this.uploadExecutor, this::upload, (long) (getFlushPeriod() * 1.5), getUploadPeriod());
+    protected AppMetr() {
     }
 
     public AppMetr(String token, String url) {
-        this(token, url, new MemoryBatchPersister());
+        this.token = token;
+        this.url = url;
     }
 
-    public void track(Action newAction) {
-        if (stopped) {
-            throw new RuntimeException("Trying to track after stop!");
-        }
-
-        final boolean needFlush;
-
-        listLock.lock();
-        try {
-            eventsSize += newAction.calcApproximateSize();
-            actionList.add(newAction);
-            needFlush = isNeedToFlush();
-        }
-        finally {
-            listLock.unlock();
-        }
-
-        if (needFlush) {
-            flushSchedule.force();
-        }
+    public void setToken(String token) {
+        this.token = token;
     }
 
-    protected void flush() {
-        log.debug("Flushing started for {} actions", actionList.size());
-
-        final ArrayList<Action> actionsToPersist;
-        listLock.lock();
-        try {
-            if (actionList.isEmpty()) {
-                log.debug("Nothing to flush");
-                return;
-            }
-
-            actionsToPersist = actionList;
-            actionList = new ArrayList<>();
-            eventsSize = 0;
-        } finally {
-            listLock.unlock();
-        }
-
-        if (batchPersister.persist(actionsToPersist)) {
-            log.debug("Flushing completed for {} actions", actionsToPersist.size());
-            uploadSchedule.force();
-        } else {
-            log.warn("Flushing failed for {} actions", actionsToPersist.size());
-        }
+    public void setUrl(String url) {
+        this.url = url;
     }
 
-    protected boolean isNeedToFlush() {
-        return eventsSize >= MAX_EVENTS_SIZE || actionList.size() >= MAX_EVENTS_COUNT;
+    public void setRetryBatchUpload(boolean retryBatchUpload) {
+        this.retryBatchUpload = retryBatchUpload;
     }
 
-    protected void upload() {
-        log.debug("Upload starting");
-
-        Batch batch;
-        int uploadedBatchCounter = 0;
-        int allBatchCounter = 0;
-        long sendBatchesBytes = 0;
-        while ((batch = batchPersister.getNext()) != null) {
-            allBatchCounter++;
-
-            boolean result;
-            final long batchReadStart = System.currentTimeMillis();
-            final byte[] batchBytes = SerializationUtils.serializeJsonGzip(batch, false);
-            final long batchReadEnd = System.currentTimeMillis();
-
-            log.trace("Batch {} read time: {} ms", batch.getBatchId(), batchReadEnd - batchReadStart);
-
-            final long batchUploadStart = System.currentTimeMillis();
-            try {
-                result = httpRequestService.sendRequest(url, token, batchBytes);
-            } catch (IOException e) {
-                log.error("IOException while sending request", e);
-                result = false;
-            }
-            final long batchUploadEnd = System.currentTimeMillis();
-
-            log.debug("Batch {} {} finished. Took {} ms", batch.getBatchId(), result ? "" : "NOT", batchUploadEnd - batchUploadStart);
-
-            if (result) {
-                log.trace("Batch {} successfully uploaded", batch.getBatchId());
-                batchPersister.remove();
-                uploadedBatchCounter++;
-                sendBatchesBytes += batchBytes.length;
-            } else {
-                log.error("Error while upload batch {}. Took {} ms", batch.getBatchId(), batchUploadEnd - batchUploadStart);
-                if (retryBatchUpload) {
-                    break;
-                }
-                batchPersister.remove();
-            }
-        }
-
-        log.debug("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
+    public void setServerId(String serverId) {
+        this.serverId = serverId;
     }
 
-    protected long getFlushPeriod() {
-        return FLUSH_PERIOD;
+    public void setClock(Clock clock) {
+        this.clock = clock;
     }
 
-    protected long getUploadPeriod() {
-        return UPLOAD_PERIOD;
+    public void setBatchStorage(BatchStorage batchStorage) {
+        this.batchStorage = batchStorage;
+    }
+
+    public void setBatchSender(BatchSender batchSender) {
+        this.batchSender = batchSender;
+    }
+
+    public void setBatchFactory(BatchFactoryServerId batchFactory) {
+        this.batchFactory = batchFactory;
+    }
+
+    public void setMaxBatchActions(int maxBatchActions) {
+        this.maxBatchActions = maxBatchActions;
+    }
+
+    public void setMaxBatchBytes(long maxBatchBytes) {
+        this.maxBatchBytes = maxBatchBytes;
+    }
+
+    public synchronized int getActionsNumber() {
+        return actionList.size();
+    }
+
+    public synchronized long getActionsBytes() {
+        return actionsBytes;
+    }
+
+    public void setFlushPeriod(Duration flushPeriod) {
+        this.flushPeriod = flushPeriod;
+    }
+
+    public void setReadRetryTimeout(Duration readRetryTimeout) {
+        this.readRetryTimeout = readRetryTimeout;
+    }
+
+    public void setFailedUploadTimeout(Duration failedUploadTimeout) {
+        this.failedUploadTimeout = failedUploadTimeout;
     }
 
     /**
-     * Does flush and then upload all pending actions.
-     * Stops inner threads.
-     * May requires some time for competition even no pending actions exist.
+     * Starts uploading
+     */
+    public synchronized void start() {
+        uploadThread = new Thread(this::upload, "appmetr-upload-" + token);
+        uploadThread.setUncaughtExceptionHandler((t, e) -> log.error("Uncaught upload exception", e));
+        uploadThread.start();
+
+        lastFlushTime = clock.instant();
+        lastThrowable = null;
+        stopped = false;
+    }
+
+    /**
+     * Does flush and stop uploading.
      */
     public void stop() {
-        stopped = true;
+        innerStop(false);
+    }
 
+    /**
+     * Stopping without waiting for upload all batches
+     */
+    public void forceStop() {
+        innerStop(true);
+    }
+
+    private synchronized void innerStop(boolean force) {
+        stopped = true;
+        forcedStop = force;
         try {
-            flushSchedule.stop();
             flush();
 
-            uploadSchedule.stop();
-
-            if (needFlushShutdown) {
-                flushExecutor.shutdown();
-            }
-            if (needUploadShutdown) {
-                uploadExecutor.shutdown();
-            }
+            uploadThread.interrupt();
+            uploadThread.join();
 
         } catch (InterruptedException e) {
             log.error("AppMetr stopping was interrupted", e);
             Thread.currentThread().interrupt();
+        } catch (IOException e) {
+            log.error("Exception while stopping", e);
         }
     }
 
-    protected HttpRequestService createHttpRequestService() {
-        return new HttpRequestService();
+    /**
+     * Can blocks until a storage space become available regardless BatchStorage implementation
+     * @return {@code true} if an Action has been tracked successfully or {@code false} if no space is currently available.
+     */
+    public synchronized boolean track(Action newAction) throws InterruptedException, IOException {
+        checkState();
+
+        if (needFlush()) {
+            if (!flush()) {
+                return false;
+            }
+        }
+
+        actionList.add(newAction);
+        actionsBytes += newAction.calcApproximateSize();
+
+        return true;
+    }
+
+    protected void checkState() {
+        if (stopped) {
+            throw new IllegalStateException("Appmetr is in stopped state", lastThrowable);
+        }
+    }
+
+    /**
+     * Can blocks until a storage space become available regardless BatchStorage implementation
+     * @return {@code true} if the actions was added to this storage, else
+     *         {@code false}
+     */
+    public synchronized boolean flush() throws InterruptedException, IOException {
+        log.trace("Flushing {} actions", actionList.size());
+
+        if (actionList.isEmpty()) {
+            log.debug("Nothing to flush");
+            return true;
+        }
+
+        final boolean stored = batchStorage.store(actionList, (actions, batchId) -> batchFactory.createBatch(actions, batchId, serverId));
+        if (stored) {
+            log.debug("Flushing completed for {} actions", actionList.size());
+            lastFlushTime = clock.instant();
+            actionList.clear();
+            actionsBytes = 0;
+        } else {
+            log.warn("Flushing failed for {} actions", actionList.size());
+        }
+
+        return stored;
+    }
+
+    public synchronized boolean flushIfNeeded() throws InterruptedException, IOException {
+        checkState();
+        
+        if (needFlush()) {
+            flush();
+            return true;
+        }
+
+        return false;
+    }
+
+    public synchronized Throwable getLastError() {
+        return lastThrowable;
+    }
+
+    protected boolean needFlush() {
+        return actionsBytes >= maxBatchBytes
+                || (maxBatchActions > 0 && actionList.size() >= maxBatchActions)
+                ||  !clock.instant().minus(flushPeriod).isBefore(lastFlushTime);
+    }
+
+    protected void upload() {
+        log.trace("Upload starting");
+
+        int uploadedBatchCounter = 0;
+        int allBatchCounter = 0;
+        long sendBatchesBytes = 0;
+        while (true) {
+            final Instant batchReadStart = clock.instant();
+            final BinaryBatch binaryBatch;
+            try {
+                binaryBatch = batchStorage.peek();
+            } catch (InterruptedException e) {
+                if (forcedStop || (batchStorage.isPersistent() || batchStorage.isEmpty())) {
+                    break;
+                } else {
+                    continue;
+                }
+            } catch (IOException e) {
+                log.error("Error while reading batch", e);
+                try {
+                    Thread.sleep(readRetryTimeout.toMillis());
+                    continue;
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+
+            allBatchCounter++;
+
+            log.trace("Batch {} read time: {}", binaryBatch.getBatchId(), Duration.between(batchReadStart, clock.instant()));
+
+            while (true) {
+                final Instant batchUploadStart = clock.instant();
+                boolean result;
+                try {
+                    result = batchSender.send(url, token, binaryBatch.getBytes());
+                } catch (Throwable e) {
+                    log.error("Unexpected exception while sending the batch {}", binaryBatch.getBatchId(), e);
+                    lastThrowable = e;
+                    stopped = true;
+                    return;
+                }
+
+                log.debug("Batch {} {} finished. Took {}", binaryBatch.getBatchId(), result ? "" : "NOT", Duration.between(batchUploadStart, clock.instant()));
+
+                if (result) {
+                    log.trace("Batch {} successfully uploaded", binaryBatch.getBatchId());
+                    tryRemove(binaryBatch.getBatchId());
+                    uploadedBatchCounter++;
+                    sendBatchesBytes += binaryBatch.getBytes().length;
+                    break;
+                }
+
+                log.error("Error while uploading batch {}", binaryBatch.getBatchId());
+
+                try {
+                    Thread.sleep(failedUploadTimeout.toMillis());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+
+                if (!retryBatchUpload) {
+                    tryRemove(binaryBatch.getBatchId());
+                }
+
+                log.info("Retrying the batch {}", binaryBatch.getBatchId());
+            }
+
+            if (Thread.interrupted()) {
+                break;
+            }
+        }
+
+        log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
+        Thread.currentThread().interrupt();
+    }
+
+    protected void tryRemove(long batchId) {
+        try {
+            batchStorage.remove();
+        } catch (IOException e) {
+            log.error("Error while removing uploaded batch {}", batchId);
+        }
     }
 }

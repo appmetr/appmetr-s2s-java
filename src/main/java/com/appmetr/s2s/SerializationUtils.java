@@ -12,8 +12,6 @@ import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -23,8 +21,6 @@ import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
 public class SerializationUtils {
-    private static Logger logger = LoggerFactory.getLogger(SerializationUtils.class);
-
     private static final String CLASS_NAME = "cls";
     private static final String INSTANCE = "inst";
     public static final ObjectMapper objectMapper;
@@ -77,7 +73,7 @@ public class SerializationUtils {
         }
     }
 
-    private static class ActionJsonSerializer extends StdSerializer<Action> {
+    static class ActionJsonSerializer extends StdSerializer<Action> {
 
         ActionJsonSerializer() {
             super(Action.class);
@@ -92,7 +88,7 @@ public class SerializationUtils {
         }
     }
 
-    private static class ActionJsonDeserializer extends StdDeserializer<Action> {
+    static class ActionJsonDeserializer extends StdDeserializer<Action> {
 
         ActionJsonDeserializer() {
             super(Action.class);

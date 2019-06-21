@@ -121,13 +121,25 @@ public class AppMetr {
     /**
      * Does flush and stop uploading.
      */
-    public synchronized void stop() {
-        stopped = true;
+    public void stop() {
+        innerStop(false);
+    }
 
+    /**
+     * Stopping without waiting for upload all batches
+     */
+    public void forceStop() {
+        innerStop(true);
+    }
+
+    private synchronized void innerStop(boolean force) {
+        stopped = true;
         try {
             flush();
 
-            uploadThread.interrupt();
+            if (force) {
+                uploadThread.interrupt();
+            }
             uploadThread.join();
 
         } catch (InterruptedException e) {
@@ -200,6 +212,10 @@ public class AppMetr {
         return false;
     }
 
+    public synchronized Throwable getLastError() {
+        return lastThrowable;
+    }
+
     protected boolean needFlush() {
         return actionsBytes >= maxBatchBytes
                 || (maxBatchActions > 0 && actionList.size() >= maxBatchActions)
@@ -213,6 +229,10 @@ public class AppMetr {
         int allBatchCounter = 0;
         long sendBatchesBytes = 0;
         while (true) {
+            if (stopped && (batchStorage.isPersistent() || batchStorage.isEmpty())) {
+                break;
+            }
+
             final Instant batchReadStart = clock.instant();
             final BinaryBatch binaryBatch;
             try {

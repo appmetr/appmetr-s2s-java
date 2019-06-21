@@ -11,9 +11,6 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class FileStorage implements BatchStorage {
     private final static Logger log = LoggerFactory.getLogger(FileStorage.class);
@@ -73,6 +70,16 @@ public class FileStorage implements BatchStorage {
         if (batchFile != null) {
             tryDeleteFile(batchFile);
         }
+    }
+
+    @Override
+    public boolean isPersistent() {
+        return true;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return fileIds.isEmpty();
     }
 
     protected void init() throws IOException {

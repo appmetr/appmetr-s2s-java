@@ -73,6 +73,7 @@ public class HttpBatchSender implements BatchSender {
 
             try (InputStream inputStream = connection.getInputStream()) {
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    log.warn("Status code error {}", connection.getResponseCode());
                     return false;
                 }
                 final String result = readStream(inputStream);

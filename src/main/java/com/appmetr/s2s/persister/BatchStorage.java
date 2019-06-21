@@ -34,4 +34,14 @@ public interface BatchStorage {
      * Removes the head of this storage.
      */
     void remove() throws IOException;
+
+    /**
+     * @return true if storage is file based or use another persistent background
+     */
+    boolean isPersistent();
+
+    /**
+     * @return if storage is empty
+     */
+    boolean isEmpty();
 }

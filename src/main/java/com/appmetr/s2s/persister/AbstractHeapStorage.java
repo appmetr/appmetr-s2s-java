@@ -62,6 +62,16 @@ public class AbstractHeapStorage implements BatchStorage {
         }
     }
 
+    @Override
+    public boolean isPersistent() {
+        return false;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return batchesQueue.isEmpty();
+    }
+
     protected boolean isCapacityExceeded(BinaryBatch binaryBatch) throws InterruptedException {
         return maxBytes > 0 && occupiedBytes + binaryBatch.getBytes().length > maxBytes;
     }

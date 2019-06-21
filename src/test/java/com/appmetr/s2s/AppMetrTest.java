@@ -60,7 +60,7 @@ public class AppMetrTest {
         assertEquals("trackEvent", events.get(0).get("action").asText());
         assertEquals("test1", events.get(0).get("event").asText());
 
-        appMetr.stop();
+        appMetr.forceStop();
     }
 
     @Test
@@ -80,7 +80,7 @@ public class AppMetrTest {
         assertEquals(1, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
 
-        appMetr.stop();
+        appMetr.forceStop();
 
         assertEquals(2, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
@@ -103,7 +103,7 @@ public class AppMetrTest {
         assertEquals(1, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
 
-        appMetr.stop();
+        appMetr.forceStop();
 
         assertEquals(2, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
@@ -130,7 +130,7 @@ public class AppMetrTest {
         assertEquals(1, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
 
-        appMetr.stop();
+        appMetr.forceStop();
 
         assertEquals(2, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
@@ -150,7 +150,7 @@ public class AppMetrTest {
         assertTrue(appMetr.track(event1));
         assertFalse(appMetr.track(event2));
 
-        appMetr.stop();
+        appMetr.forceStop();
     }
 
     @Test
@@ -192,7 +192,7 @@ public class AppMetrTest {
 
         verify(mockSender, timeout(100).atLeast(2)).send(eq(url), eq(token), any());
         
-        appMetr.stop();
+        appMetr.forceStop();
 
         assertFalse(testStorage.getBathesQueue().isEmpty());
     }
@@ -215,7 +215,7 @@ public class AppMetrTest {
 
         verify(mockSender, timeout(100)).send(eq(url), eq(token), any());
 
-        appMetr.stop();
+        appMetr.forceStop();
 
         assertTrue(testStorage.getBathesQueue().isEmpty());
     }
@@ -236,6 +236,8 @@ public class AppMetrTest {
         assertThrows(RuntimeException.class, () -> appMetr.track(new Event("test2")));
 
         assertFalse(testStorage.getBathesQueue().isEmpty());
+
+        assertTrue(RuntimeException.class.isAssignableFrom(appMetr.getLastError().getClass()));
     }
 
     static void waitForever() throws InterruptedException {

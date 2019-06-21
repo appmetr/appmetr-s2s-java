@@ -1,20 +1,23 @@
 package com.appmetr.s2s;
 
-import com.appmetr.s2s.events.Event;
-import com.appmetr.s2s.events.Level;
-import com.appmetr.s2s.events.Payment;
+import com.appmetr.s2s.events.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 class SerializationUtilsTest {
@@ -75,7 +78,6 @@ class SerializationUtilsTest {
         assertEquals("testUser", action.getUserId());
         assertTrue(action.getProperties().containsKey("game"));
         assertEquals("wr", action.getProperties().get("game"));
-
     }
 
     @Test
@@ -110,24 +112,7 @@ class SerializationUtilsTest {
         assertNull(batchNode.get(0).get("$userTime"));
     }
 
-    @Test
-    void serializeLevel_Gson() throws Exception {
-        Batch original = new Batch("s1", 2, Collections.singletonList(new Level(2)));
-        byte[] bytes = SerializationUtilsGson.serializeJsonGzip(original, true);
-        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(deserialized);
-        assertEquals(original, deserialized);
-    }
-
-    @Test
-    void serializePayment_Gson() throws Exception {
-        Batch original = new Batch("s1", 2, Collections.singletonList(
-                new Payment("order1", "trans1", "proc1", "USD", "123")));
-        byte[] bytes = SerializationUtilsGson.serializeJsonGzip(original, true);
-        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(deserialized);
-        assertEquals(original, deserialized);
-    public static JsonNode decompress(byte[] compressedBody) throws IOException {
+    static JsonNode decompress(byte[] compressedBody) throws IOException {
         ByteArrayOutputStream inflatedByteStream = new ByteArrayOutputStream();
         Inflater inflater = new Inflater(true);
         try (InflaterOutputStream inflateStream = new InflaterOutputStream(inflatedByteStream, inflater)) {
@@ -138,5 +123,4 @@ class SerializationUtilsTest {
             inflater.end();
         }
     }
-
 }

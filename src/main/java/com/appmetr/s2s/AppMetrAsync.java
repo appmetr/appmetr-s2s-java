@@ -42,6 +42,7 @@ public class AppMetrAsync {
                 appMetr.track(newAction);
             } catch (Throwable t) {
                 log.error("Track {} failed", newAction, t);
+                throw new RuntimeException(t);
             }
         }, executorService);
     }

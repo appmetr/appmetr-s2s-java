@@ -36,10 +36,10 @@ public class AppMetrAsync {
         }, appMetr.flushPeriod.toMillis(), appMetr.flushPeriod.toMillis(), TimeUnit.MILLISECONDS);
     }
 
-    public CompletableFuture<Void> track(Action newAction) {
-        return CompletableFuture.runAsync(() -> {
+    public CompletableFuture<Boolean> track(Action newAction) {
+        return CompletableFuture.supplyAsync(() -> {
             try {
-                appMetr.track(newAction);
+                return appMetr.track(newAction);
             } catch (Throwable t) {
                 log.error("Track {} failed", newAction, t);
                 throw new RuntimeException(t);

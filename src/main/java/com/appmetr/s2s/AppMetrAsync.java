@@ -4,6 +4,7 @@ import com.appmetr.s2s.events.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.concurrent.*;
 
 /**
@@ -45,21 +46,17 @@ public class AppMetrAsync {
         }, executorService);
     }
 
-    public void stop() {
+    public void stop() throws IOException, InterruptedException {
         periodicFlushingFuture.cancel(false);
         executorService.shutdown();
         awaitTermination();
+        appMetr.flush();
         appMetr.stop();
     }
 
-    protected void awaitTermination() {
-        try {
-            while (!executorService.awaitTermination(30, TimeUnit.SECONDS)) {
-                log.warn("ExecutorService {} do not terminated", executorService);
-            }
-        } catch (InterruptedException e) {
-            log.warn("Executor Service was interrupted", e);
-            Thread.currentThread().interrupt();
+    protected void awaitTermination() throws InterruptedException {
+        while (!executorService.awaitTermination(30, TimeUnit.SECONDS)) {
+            log.warn("ExecutorService {} do not terminated", executorService);
         }
     }
 }

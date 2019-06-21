@@ -213,7 +213,7 @@ public class AppMetrTest {
 
         appMetr.flush();
 
-        verify(mockSender, timeout(100)).send(eq(url), eq(token), any());
+        verify(mockSender, timeout(50)).send(eq(url), eq(token), any());
 
         appMetr.forceStop();
 

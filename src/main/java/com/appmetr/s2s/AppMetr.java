@@ -31,6 +31,7 @@ public class AppMetr {
     protected Duration failedUploadTimeout = Duration.ofSeconds(1);
 
     protected boolean stopped = true;
+    protected boolean forcedStop;
     protected long actionsBytes;
     protected Instant lastFlushTime;
     protected ArrayList<Action> actionList = new ArrayList<>();
@@ -134,12 +135,11 @@ public class AppMetr {
 
     private synchronized void innerStop(boolean force) {
         stopped = true;
+        forcedStop = force;
         try {
             flush();
 
-            if (force) {
-                uploadThread.interrupt();
-            }
+            uploadThread.interrupt();
             uploadThread.join();
 
         } catch (InterruptedException e) {
@@ -229,16 +229,16 @@ public class AppMetr {
         int allBatchCounter = 0;
         long sendBatchesBytes = 0;
         while (true) {
-            if (stopped && (batchStorage.isPersistent() || batchStorage.isEmpty())) {
-                break;
-            }
-
             final Instant batchReadStart = clock.instant();
             final BinaryBatch binaryBatch;
             try {
                 binaryBatch = batchStorage.peek();
             } catch (InterruptedException e) {
-                break;
+                if (forcedStop || (batchStorage.isPersistent() || batchStorage.isEmpty())) {
+                    break;
+                } else {
+                    continue;
+                }
             } catch (IOException e) {
                 log.error("Error while reading batch", e);
                 try {

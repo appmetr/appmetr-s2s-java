@@ -237,7 +237,7 @@ public class AppMetrTest {
 
         assertFalse(testStorage.getBathesQueue().isEmpty());
 
-        assertTrue(RuntimeException.class.isAssignableFrom(appMetr.getLastError().getClass()));
+        assertTrue(RuntimeException.class.isAssignableFrom(appMetr.getLastUploadError().getClass()));
     }
 
     static void waitForever() throws InterruptedException {

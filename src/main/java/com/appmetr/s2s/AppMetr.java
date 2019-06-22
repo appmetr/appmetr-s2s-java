@@ -36,7 +36,7 @@ public class AppMetr {
     protected Instant lastFlushTime;
     protected ArrayList<Action> actionList = new ArrayList<>();
     protected Thread uploadThread;
-    protected Throwable lastThrowable;
+    protected Throwable lastUploadThrowable;
 
     protected AppMetr() {
     }
@@ -115,7 +115,7 @@ public class AppMetr {
         uploadThread.start();
 
         lastFlushTime = clock.instant();
-        lastThrowable = null;
+        lastUploadThrowable = null;
         stopped = false;
     }
 
@@ -171,7 +171,7 @@ public class AppMetr {
 
     protected void checkState() {
         if (stopped) {
-            throw new IllegalStateException("Appmetr is in stopped state", lastThrowable);
+            throw new IllegalStateException("Appmetr is in stopped state", lastUploadThrowable);
         }
     }
 
@@ -212,8 +212,8 @@ public class AppMetr {
         return false;
     }
 
-    public synchronized Throwable getLastError() {
-        return lastThrowable;
+    public synchronized Throwable getLastUploadError() {
+        return lastUploadThrowable;
     }
 
     protected boolean needFlush() {
@@ -234,7 +234,7 @@ public class AppMetr {
             try {
                 binaryBatch = batchStorage.peek();
             } catch (InterruptedException e) {
-                if (forcedStop || (batchStorage.isPersistent() || batchStorage.isEmpty())) {
+                if (shouldInterrupt()) {
                     break;
                 } else {
                     continue;
@@ -245,8 +245,12 @@ public class AppMetr {
                     Thread.sleep(readRetryTimeout.toMillis());
                     continue;
                 } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
+                    if (shouldInterrupt()) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } else {
+                        continue;
+                    }
                 }
             }
 
@@ -261,7 +265,7 @@ public class AppMetr {
                     result = batchSender.send(url, token, binaryBatch.getBytes());
                 } catch (Throwable e) {
                     log.error("Unexpected exception while sending the batch {}", binaryBatch.getBatchId(), e);
-                    lastThrowable = e;
+                    lastUploadThrowable = e;
                     stopped = true;
                     return;
                 }
@@ -281,8 +285,10 @@ public class AppMetr {
                 try {
                     Thread.sleep(failedUploadTimeout.toMillis());
                 } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
+                    if (shouldInterrupt()) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
 
                 if (!retryBatchUpload) {
@@ -292,7 +298,7 @@ public class AppMetr {
                 log.info("Retrying the batch {}", binaryBatch.getBatchId());
             }
 
-            if (Thread.interrupted()) {
+            if (Thread.interrupted() && shouldInterrupt()) {
                 break;
             }
         }
@@ -307,5 +313,9 @@ public class AppMetr {
         } catch (IOException e) {
             log.error("Error while removing uploaded batch {}", batchId);
         }
+    }
+
+    protected boolean shouldInterrupt() {
+        return forcedStop || batchStorage.isPersistent() || batchStorage.isEmpty();
     }
 }

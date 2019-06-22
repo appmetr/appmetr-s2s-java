@@ -31,7 +31,7 @@ public class AppMetr {
     protected Duration failedUploadTimeout = Duration.ofSeconds(1);
 
     protected boolean stopped = true;
-    protected boolean forcedStop;
+    protected volatile boolean forcedStop;
     protected long actionsBytes;
     protected Instant lastFlushTime;
     protected ArrayList<Action> actionList = new ArrayList<>();

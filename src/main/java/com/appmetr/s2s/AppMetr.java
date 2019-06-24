@@ -30,7 +30,7 @@ public class AppMetr {
     protected Duration readRetryTimeout = Duration.ofSeconds(3);
     protected Duration failedUploadTimeout = Duration.ofSeconds(1);
 
-    protected boolean stopped = true;
+    protected volatile boolean stopped = true;
     protected volatile boolean forcedStop;
     protected long actionsBytes;
     protected Instant lastFlushTime;
@@ -298,7 +298,7 @@ public class AppMetr {
                 log.info("Retrying the batch {}", binaryBatch.getBatchId());
             }
 
-            if (Thread.interrupted() && shouldInterrupt()) {
+            if (stopped && shouldInterrupt()) {
                 break;
             }
         }

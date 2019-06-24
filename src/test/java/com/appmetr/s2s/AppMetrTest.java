@@ -176,6 +176,27 @@ public class AppMetrTest {
     }
 
     @Test
+    void senderSuccessSeveralBatches() throws IOException, InterruptedException {
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
+        when(mockSender.send(eq(url), eq(token), any())).thenReturn(true);
+
+        final TestStorage testStorage = new TestStorage();
+
+        appMetr.setBatchSender(mockSender);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.start();
+
+        assertTrue(appMetr.track(new Event("test1")));
+        appMetr.flush();
+        assertTrue(appMetr.track(new Event("test2")));
+        appMetr.stop();
+
+        verify(mockSender, times(2)).send(eq(url), eq(token), any());
+
+        assertTrue(testStorage.getBathesQueue().isEmpty());
+    }
+
+    @Test
     void senderFail() throws IOException, InterruptedException {
         final BatchSender mockSender = Mockito.mock(BatchSender.class);
 

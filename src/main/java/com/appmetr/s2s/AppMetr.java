@@ -304,14 +304,13 @@ public class AppMetr {
         }
 
         log.info("{} from {} batches uploaded. ({} bytes)", uploadedBatchCounter, allBatchCounter, sendBatchesBytes);
-        Thread.currentThread().interrupt();
     }
 
     protected void tryRemove(long batchId) {
         try {
             batchStorage.remove();
         } catch (IOException e) {
-            log.error("Error while removing uploaded batch {}", batchId);
+            log.error("Error while removing uploaded batch {}", batchId, e);
         }
     }
 

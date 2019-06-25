@@ -28,7 +28,7 @@ public class SerializationUtils {
 
     static {
         objectMapper = new ObjectMapper()
-                .setSerializationInclusion(JsonInclude.Include.NON_DEFAULT)
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 .setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
                 .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         objectMapperTyped = objectMapper.copy();

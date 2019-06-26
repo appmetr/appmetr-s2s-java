@@ -4,7 +4,6 @@ import com.appmetr.s2s.events.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.concurrent.*;
 
 /**
@@ -57,9 +56,8 @@ public class AppMetrAsync {
         }, executorService).thenCompose(aVoid -> CompletableFuture.runAsync(() -> {
             try {
                 awaitTermination();
-                appMetr.flush();
                 appMetr.softStop();
-            } catch (InterruptedException | IOException e) {
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }, r -> new Thread(r, "appmetr-async-stop").start()));

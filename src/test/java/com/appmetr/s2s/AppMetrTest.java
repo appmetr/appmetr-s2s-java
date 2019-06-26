@@ -60,7 +60,7 @@ public class AppMetrTest {
         assertEquals("trackEvent", events.get(0).get("action").asText());
         assertEquals("test1", events.get(0).get("event").asText());
 
-        appMetr.forceStop();
+        appMetr.hardStop();
     }
 
     @Test
@@ -80,7 +80,7 @@ public class AppMetrTest {
         assertEquals(1, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
 
-        appMetr.forceStop();
+        appMetr.hardStop();
 
         assertEquals(2, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
@@ -103,7 +103,7 @@ public class AppMetrTest {
         assertEquals(1, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
 
-        appMetr.forceStop();
+        appMetr.hardStop();
 
         assertEquals(2, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
@@ -130,7 +130,7 @@ public class AppMetrTest {
         assertEquals(1, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event1), testStorage.storeCalls.get(0));
 
-        appMetr.forceStop();
+        appMetr.hardStop();
 
         assertEquals(2, testStorage.storeCalls.size());
         assertEquals(Collections.singletonList(event2), testStorage.storeCalls.get(1));
@@ -150,7 +150,7 @@ public class AppMetrTest {
         assertTrue(appMetr.track(event1));
         assertFalse(appMetr.track(event2));
 
-        appMetr.forceStop();
+        appMetr.hardStop();
     }
 
     @Test
@@ -197,6 +197,68 @@ public class AppMetrTest {
     }
 
     @Test
+    void persistentStorageAndStop() throws IOException, InterruptedException {
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
+        when(mockSender.send(eq(url), eq(token), any())).thenReturn(true);
+
+        final TestStorage testStorage = new TestPersistentStorage();
+
+        appMetr.setBatchSender(mockSender);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.start();
+
+        assertTrue(appMetr.track(new Event("test1")));
+        appMetr.flush();
+        assertTrue(appMetr.track(new Event("test2")));
+        appMetr.stop();
+
+        verify(mockSender).send(eq(url), eq(token), any());
+
+        assertEquals(1, testStorage.getBathesQueue().size());
+    }
+
+    @Test
+    void persistentStorageAndSoftStop() throws IOException, InterruptedException {
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
+        when(mockSender.send(eq(url), eq(token), any())).thenReturn(true);
+
+        final TestStorage testStorage = new TestPersistentStorage();
+
+        appMetr.setBatchSender(mockSender);
+        appMetr.setBatchStorage(testStorage);
+        appMetr.start();
+
+        assertTrue(appMetr.track(new Event("test1")));
+        appMetr.flush();
+        assertTrue(appMetr.track(new Event("test2")));
+        appMetr.softStop();
+
+        verify(mockSender, times(2)).send(eq(url), eq(token), any());
+
+        assertTrue(testStorage.getBathesQueue().isEmpty());
+    }
+
+    @Test
+    void asyncAppmetrPersistentStorageAndSoftStop() throws IOException, InterruptedException {
+        final BatchSender mockSender = Mockito.mock(BatchSender.class);
+        when(mockSender.send(eq(url), eq(token), any())).thenReturn(true);
+
+        final TestStorage testStorage = new TestPersistentStorage();
+
+        appMetr.setBatchSender(mockSender);
+        appMetr.setBatchStorage(testStorage);
+
+        final AppMetrAsync appMetrAsync = new AppMetrAsync(appMetr);
+        appMetrAsync.track(new Event("test1"));
+        appMetrAsync.track(new Event("test2"));
+        appMetrAsync.stop().join();
+
+        verify(mockSender).send(eq(url), eq(token), any());
+
+        assertTrue(testStorage.getBathesQueue().isEmpty());
+    }
+
+    @Test
     void senderFail() throws IOException, InterruptedException {
         final BatchSender mockSender = Mockito.mock(BatchSender.class);
 
@@ -213,7 +275,7 @@ public class AppMetrTest {
 
         verify(mockSender, timeout(100).atLeast(2)).send(eq(url), eq(token), any());
         
-        appMetr.forceStop();
+        appMetr.hardStop();
 
         assertFalse(testStorage.getBathesQueue().isEmpty());
     }
@@ -234,9 +296,9 @@ public class AppMetrTest {
 
         appMetr.flush();
 
-        verify(mockSender, timeout(50)).send(eq(url), eq(token), any());
+        verify(mockSender).send(eq(url), eq(token), any());
 
-        appMetr.forceStop();
+        appMetr.hardStop();
 
         assertTrue(testStorage.getBathesQueue().isEmpty());
     }
@@ -277,6 +339,13 @@ public class AppMetrTest {
         
         Queue<BinaryBatch> getBathesQueue() {
             return batchesQueue;
+        }
+    }
+
+    static class TestPersistentStorage extends TestStorage {
+        @Override
+        public boolean isPersistent() {
+            return true;
         }
     }
 

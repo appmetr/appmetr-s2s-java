@@ -31,7 +31,8 @@ public class AppMetr {
     protected Duration failedUploadTimeout = Duration.ofSeconds(1);
 
     protected volatile boolean stopped = true;
-    protected volatile boolean forcedStop;
+    protected volatile boolean hardStop;
+    protected volatile boolean softStop;
     protected long actionsBytes;
     protected Instant lastFlushTime;
     protected ArrayList<Action> actionList = new ArrayList<>();
@@ -106,10 +107,18 @@ public class AppMetr {
         this.failedUploadTimeout = failedUploadTimeout;
     }
 
+    public boolean isStopped() {
+        return stopped;
+    }
+
     /**
      * Starts uploading
      */
     public synchronized void start() {
+        if (!stopped) {
+            throw new IllegalStateException("Appmetr is in running state");
+        }
+
         uploadThread = new Thread(this::upload, "appmetr-upload-" + token);
         uploadThread.setUncaughtExceptionHandler((t, e) -> log.error("Uncaught upload exception", e));
         uploadThread.start();
@@ -120,22 +129,10 @@ public class AppMetr {
     }
 
     /**
-     * Does flush and stop uploading.
+     * Does flush and stop uploading if backing storage is persistent or no batches it it
      */
-    public void stop() {
-        innerStop(false);
-    }
-
-    /**
-     * Stopping without waiting for upload all batches
-     */
-    public void forceStop() {
-        innerStop(true);
-    }
-
-    private synchronized void innerStop(boolean force) {
+    public synchronized void stop() {
         stopped = true;
-        forcedStop = force;
         try {
             flush();
 
@@ -148,6 +145,22 @@ public class AppMetr {
         } catch (IOException e) {
             log.error("Exception while stopping", e);
         }
+    }
+
+    /**
+     * Stopping without waiting for upload any batches
+     */
+    public void hardStop() {
+        hardStop = true;
+        stop();
+    }
+
+    /**
+     * Waiting until upload all batches then stop
+     */
+    public void softStop() {
+        softStop = true;
+        stop();
     }
 
     /**
@@ -315,6 +328,6 @@ public class AppMetr {
     }
 
     protected boolean shouldInterrupt() {
-        return forcedStop || batchStorage.isPersistent() || batchStorage.isEmpty();
+        return hardStop || (batchStorage.isPersistent() && !softStop) || batchStorage.isEmpty();
     }
 }

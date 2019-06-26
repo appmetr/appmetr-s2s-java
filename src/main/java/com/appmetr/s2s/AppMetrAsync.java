@@ -4,7 +4,6 @@ import com.appmetr.s2s.events.Action;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.concurrent.*;
 
 /**
@@ -26,7 +25,10 @@ public class AppMetrAsync {
         this.appMetr = appMetr;
         this.executorService = executorService;
 
-        appMetr.start();
+        if (appMetr.isStopped()) {
+            appMetr.start();
+        }
+
         periodicFlushingFuture = executorService.scheduleWithFixedDelay(() -> {
             try {
                 appMetr.flushIfNeeded();
@@ -47,12 +49,18 @@ public class AppMetrAsync {
         }, executorService);
     }
 
-    public void stop() throws IOException, InterruptedException {
-        periodicFlushingFuture.cancel(false);
-        executorService.shutdown();
-        awaitTermination();
-        appMetr.flush();
-        appMetr.stop();
+    public CompletableFuture<Void> stop() {
+        return CompletableFuture.runAsync(() -> {
+            periodicFlushingFuture.cancel(false);
+            executorService.shutdown();
+        }, executorService).thenCompose(aVoid -> CompletableFuture.runAsync(() -> {
+            try {
+                awaitTermination();
+                appMetr.softStop();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }, r -> new Thread(r, "appmetr-async-stop").start()));
     }
 
     protected void awaitTermination() throws InterruptedException {

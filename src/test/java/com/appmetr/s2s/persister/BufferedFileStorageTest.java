@@ -9,9 +9,6 @@ import org.opentest4j.AssertionFailedError;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.Collections;
 
 import static java.time.Duration.ofMillis;
@@ -28,7 +25,6 @@ class BufferedFileStorageTest {
 
     @BeforeEach
     void setUp(@TempDir Path path) throws IOException {
-        heapStorage.setClock(Clock.fixed(Instant.ofEpochMilli(1), ZoneOffset.UTC));
         System.out.println(path);
         fileStorage = new FileStorage(path);
     }

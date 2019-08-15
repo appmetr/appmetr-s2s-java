@@ -12,7 +12,7 @@ public class BufferedFileStorage implements BatchStorage {
     protected final Thread saveThread;
 
     protected long batchId;
-    protected Throwable lastSaveThrowable;
+    protected volatile Throwable lastStorageThrowable;
     protected volatile boolean stopped;
 
     public BufferedFileStorage(FileStorage fileStorage, AbstractHeapStorage heapStorage) {
@@ -20,26 +20,26 @@ public class BufferedFileStorage implements BatchStorage {
         this.heapStorage = heapStorage;
         batchId = fileStorage.lastBatchId;
 
-        lastSaveThrowable = null;
-        saveThread = new Thread(this::save, "appmetr-save-" + fileStorage.path.getParent().getFileName());
-        saveThread.setUncaughtExceptionHandler((t, e) -> lastSaveThrowable = e);
+        lastStorageThrowable = null;
+        saveThread = new Thread(this::save, "appmetr-storage-" + fileStorage.path.getParent().getFileName());
+        saveThread.setUncaughtExceptionHandler((t, e) -> lastStorageThrowable = e);
         saveThread.start();
     }
 
     @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException, IOException {
         if (stopped) {
-            throw new IllegalStateException("Storage is in shutdown state", lastSaveThrowable);
+            throw new IllegalStateException("Storage is in shutdown state", lastStorageThrowable);
         }
 
-        if (lastSaveThrowable != null) {
-            if (lastSaveThrowable instanceof IOException) {
-                throw (IOException) lastSaveThrowable;
-            } if (lastSaveThrowable instanceof Error) {
-                throw (Error) lastSaveThrowable;
-            } if (lastSaveThrowable instanceof RuntimeException) {
-                throw (RuntimeException) lastSaveThrowable;
+        if (lastStorageThrowable != null) {
+            if (lastStorageThrowable instanceof IOException) {
+                throw (IOException) lastStorageThrowable;
+            } if (lastStorageThrowable instanceof Error) {
+                throw (Error) lastStorageThrowable;
+            } if (lastStorageThrowable instanceof RuntimeException) {
+                throw (RuntimeException) lastStorageThrowable;
             } else {
-                throw new RuntimeException(lastSaveThrowable);
+                throw new RuntimeException(lastStorageThrowable);
             }
         }
 
@@ -59,7 +59,7 @@ public class BufferedFileStorage implements BatchStorage {
                     fileStorage.store(binaryBatch);
                     heapStorage.remove();
                 } catch (IOException e) {
-                    lastSaveThrowable = e;
+                    lastStorageThrowable = e;
                     break;
                 }
             } catch (InterruptedException e) {
@@ -94,5 +94,9 @@ public class BufferedFileStorage implements BatchStorage {
         stopped = true;
         saveThread.interrupt();
         saveThread.join();
+    }
+
+    public Throwable getLastStorageError() {
+        return lastStorageThrowable;
     }
 }

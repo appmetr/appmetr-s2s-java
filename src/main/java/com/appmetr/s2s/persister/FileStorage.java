@@ -36,7 +36,7 @@ public class FileStorage implements BatchStorage {
         return store(binaryBatch);
     }
 
-    protected boolean store(BinaryBatch binaryBatch) throws IOException {
+    protected synchronized boolean store(BinaryBatch binaryBatch) throws IOException {
         final Path file = batchFilePath(lastBatchId);
 
         Files.write(file, binaryBatch.getBytes());

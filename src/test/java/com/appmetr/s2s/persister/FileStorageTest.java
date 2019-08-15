@@ -2,7 +2,6 @@ package com.appmetr.s2s.persister;
 
 import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.events.Event;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -53,7 +52,7 @@ class FileStorageTest {
             fail(throwables[0]);
         }
 
-        assertTrue(fileStorage.fileIds.isEmpty());
+        assertTrue(fileStorage.isEmpty());
     }
 
     @Test
@@ -70,6 +69,6 @@ class FileStorageTest {
         assertEquals(1, binaryBatch2.getBatchId());
         otherStorage.remove();
 
-        assertTrue(otherStorage.fileIds.isEmpty());
+        assertTrue(otherStorage.isEmpty());
     }
 }

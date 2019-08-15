@@ -34,7 +34,7 @@ public class AbstractHeapStorage implements BatchStorage {
         return store(batchFactory.createBatch(actions, batchId));
     }
 
-    protected boolean store(BinaryBatch binaryBatch) throws InterruptedException {
+    protected synchronized boolean store(BinaryBatch binaryBatch) throws InterruptedException {
         if (isCapacityExceeded(binaryBatch)) {
             return false;
         }

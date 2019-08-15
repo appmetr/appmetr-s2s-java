@@ -80,6 +80,6 @@ class HeapStorageTest {
             fail(throwables[1]);
         }
 
-        assertTrue(heapStorage.batchesQueue.isEmpty());
+        assertTrue(heapStorage.isEmpty());
     }
 }

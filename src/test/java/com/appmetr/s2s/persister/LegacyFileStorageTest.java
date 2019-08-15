@@ -4,7 +4,6 @@ import com.appmetr.s2s.Batch;
 import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.SerializationUtils;
 import com.appmetr.s2s.events.Event;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,17 +13,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LegacyFileStorageTest {
-
     static BatchFactory batchFactory = (actions, batchId) -> new BinaryBatch(batchId, new byte[1]);
 
     LegacyFileStorage legacyFileStorage;
-
-    @BeforeEach
-    void setUp(@TempDir Path path) throws IOException {
-    }
 
     @Test
     void readFromLegacyFiles(@TempDir Path path) throws IOException, InterruptedException {
@@ -49,7 +44,7 @@ class LegacyFileStorageTest {
         assertEquals(2, binaryBatch3.getBatchId());
         otherStorage.remove();
 
-        assertTrue(otherStorage.fileIds.isEmpty());
+        assertTrue(otherStorage.isEmpty());
     }
 
     void createBatch(Path path, long batchId) throws IOException {

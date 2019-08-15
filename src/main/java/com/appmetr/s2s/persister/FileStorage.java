@@ -33,6 +33,10 @@ public class FileStorage implements BatchStorage {
 
     @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws IOException {
         final BinaryBatch binaryBatch = batchFactory.createBatch(actions, lastBatchId);
+        return store(binaryBatch);
+    }
+
+    protected boolean store(BinaryBatch binaryBatch) throws IOException {
         final Path file = batchFilePath(lastBatchId);
 
         Files.write(file, binaryBatch.getBytes());

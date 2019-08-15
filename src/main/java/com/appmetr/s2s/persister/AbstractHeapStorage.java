@@ -31,13 +31,16 @@ public class AbstractHeapStorage implements BatchStorage {
             batchId = previousBatchId + 1;
         }
 
-        final BinaryBatch binaryBatch = batchFactory.createBatch(actions, batchId);
+        return store(batchFactory.createBatch(actions, batchId));
+    }
+
+    protected boolean store(BinaryBatch binaryBatch) throws InterruptedException {
         if (isCapacityExceeded(binaryBatch)) {
             return false;
         }
 
         occupiedBytes += binaryBatch.getBytes().length;
-        previousBatchId = batchId;
+        previousBatchId = binaryBatch.getBatchId();
         batchesQueue.add(binaryBatch);
 
         notify();

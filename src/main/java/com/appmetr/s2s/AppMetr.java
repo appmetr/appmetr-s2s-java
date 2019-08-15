@@ -135,6 +135,7 @@ public class AppMetr {
         stopped = true;
         try {
             flush();
+            batchStorage.shutdown();
 
             uploadThread.interrupt();
             uploadThread.join();

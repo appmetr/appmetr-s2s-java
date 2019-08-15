@@ -44,4 +44,9 @@ public interface BatchStorage {
      * @return if storage is empty
      */
     boolean isEmpty();
+
+    /**
+     * Storage should store all data and clean up
+     */
+    default void shutdown() throws InterruptedException {}
 }

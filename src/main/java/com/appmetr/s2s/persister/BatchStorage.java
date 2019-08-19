@@ -28,7 +28,7 @@ public interface BatchStorage {
      * @return the head of this storage
      * @throws InterruptedException if interrupted while waiting
      */
-    BinaryBatch peek() throws InterruptedException, IOException;
+    BinaryBatch get() throws InterruptedException, IOException;
 
     /**
      * Removes the head of this storage.

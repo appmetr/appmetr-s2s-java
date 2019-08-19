@@ -246,7 +246,7 @@ public class AppMetr {
             final Instant batchReadStart = clock.instant();
             final BinaryBatch binaryBatch;
             try {
-                binaryBatch = batchStorage.peek();
+                binaryBatch = batchStorage.get();
             } catch (InterruptedException e) {
                 if (shouldInterrupt()) {
                     break;

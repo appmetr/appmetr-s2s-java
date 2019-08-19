@@ -68,11 +68,11 @@ class BufferedFileStorageTest {
 
         final Thread consumerThread = new Thread(() -> {
             try {
-                final BinaryBatch binaryBatch1 = bufferedFileStorage.peek();
+                final BinaryBatch binaryBatch1 = bufferedFileStorage.get();
                 assertEquals(0, binaryBatch1.getBatchId());
                 bufferedFileStorage.remove();
 
-                final BinaryBatch binaryBatch2 = bufferedFileStorage.peek();
+                final BinaryBatch binaryBatch2 = bufferedFileStorage.get();
                 assertEquals(1, binaryBatch2.getBatchId());
                 bufferedFileStorage.remove();
             } catch (Throwable e) {

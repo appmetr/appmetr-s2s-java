@@ -34,13 +34,13 @@ class LegacyFileStorageTest {
         assertTrue(legacyFileStorage.store(Collections.singleton(new Event("test2")), batchFactory));
 
         final LegacyFileStorage otherStorage = new LegacyFileStorage(path);
-        final BinaryBatch binaryBatch1 = otherStorage.peek();
+        final BinaryBatch binaryBatch1 = otherStorage.get();
         assertEquals(0, binaryBatch1.getBatchId());
         otherStorage.remove();
-        final BinaryBatch binaryBatch2 = otherStorage.peek();
+        final BinaryBatch binaryBatch2 = otherStorage.get();
         assertEquals(1, binaryBatch2.getBatchId());
         otherStorage.remove();
-        final BinaryBatch binaryBatch3 = otherStorage.peek();
+        final BinaryBatch binaryBatch3 = otherStorage.get();
         assertEquals(2, binaryBatch3.getBatchId());
         otherStorage.remove();
 

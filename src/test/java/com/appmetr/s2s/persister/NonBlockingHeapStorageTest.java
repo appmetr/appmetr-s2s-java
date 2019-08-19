@@ -29,7 +29,7 @@ class NonBlockingHeapStorageTest {
 
         final Thread consumerThread = new Thread(() -> {
             try {
-                final BinaryBatch binaryBatch = nonBlockingHeapStorage.peek();
+                final BinaryBatch binaryBatch = nonBlockingHeapStorage.get();
                 assertEquals(1, binaryBatch.getBatchId());
                 nonBlockingHeapStorage.remove();
             } catch (Throwable e) {
@@ -52,7 +52,7 @@ class NonBlockingHeapStorageTest {
     void consumerFirst() throws InterruptedException {
         final Thread consumerThread = new Thread(() -> {
             try {
-                final BinaryBatch binaryBatch = nonBlockingHeapStorage.peek();
+                final BinaryBatch binaryBatch = nonBlockingHeapStorage.get();
                 assertEquals(1, binaryBatch.getBatchId());
                 nonBlockingHeapStorage.remove();
             } catch (Throwable e) {

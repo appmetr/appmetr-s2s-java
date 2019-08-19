@@ -54,7 +54,7 @@ public class BufferedFileStorage implements BatchStorage {
     protected void save() {
         while (true) {
             try {
-                final BinaryBatch binaryBatch = heapStorage.peek();
+                final BinaryBatch binaryBatch = heapStorage.get();
                 try {
                     fileStorage.store(binaryBatch);
                     heapStorage.remove();
@@ -74,8 +74,8 @@ public class BufferedFileStorage implements BatchStorage {
         }
     }
 
-    @Override public BinaryBatch peek() throws InterruptedException, IOException {
-        return fileStorage.peek();
+    @Override public BinaryBatch get() throws InterruptedException, IOException {
+        return fileStorage.get();
     }
 
     @Override public void remove() throws IOException {

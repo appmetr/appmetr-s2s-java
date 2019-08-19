@@ -48,7 +48,7 @@ public class AbstractHeapStorage implements BatchStorage {
         return true;
     }
 
-    @Override public synchronized BinaryBatch peek() throws InterruptedException {
+    @Override public synchronized BinaryBatch get() throws InterruptedException {
         while (true) {
             final BinaryBatch binaryBatch = batchesQueue.peek();
             if (binaryBatch != null) {

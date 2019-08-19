@@ -49,7 +49,7 @@ public class FileStorage implements BatchStorage {
         return true;
     }
 
-    @Override public synchronized BinaryBatch peek() throws InterruptedException, IOException {
+    @Override public synchronized BinaryBatch get() throws InterruptedException, IOException {
         while (true) {
             final Long batchId = fileIds.peek();
             if (batchId == null) {

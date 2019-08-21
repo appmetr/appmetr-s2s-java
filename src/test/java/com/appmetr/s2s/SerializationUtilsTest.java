@@ -112,6 +112,22 @@ class SerializationUtilsTest {
         assertNull(batchNode.get(0).get("$userTime"));
     }
 
+    @Test
+    void serializeAttacheEntityAttributes() throws IOException {
+        final AttachEntityAttributes attachEntityAttributes = new AttachEntityAttributes("$serverUserId", "testId");
+        attachEntityAttributes.getProperties().put("p1", 1);
+        final Batch batch = new Batch("s1", 1, singletonList(attachEntityAttributes));
+        final byte[] bytes = SerializationUtils.serializeJsonGzip(batch, false);
+
+        final JsonNode jsonNode = decompress(bytes);
+        final ArrayNode batches = (ArrayNode) jsonNode.get("batch");
+        assertEquals(1, batches.size());
+        final JsonNode action = batches.get(0);
+        assertEquals(AttachEntityAttributes.ACTION, action.get("action").textValue());
+        assertEquals("$serverUserId", action.get("entityName").textValue());
+        assertEquals("testId", action.get("entityValue").textValue());
+    }
+
     static JsonNode decompress(byte[] compressedBody) throws IOException {
         ByteArrayOutputStream inflatedByteStream = new ByteArrayOutputStream();
         Inflater inflater = new Inflater(true);

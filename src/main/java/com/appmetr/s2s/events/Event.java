@@ -3,7 +3,7 @@ package com.appmetr.s2s.events;
 import java.util.Objects;
 
 public class Event extends Action {
-    private static final String ACTION = "trackEvent";
+    public static final String ACTION = "trackEvent";
 
     private String event;
 

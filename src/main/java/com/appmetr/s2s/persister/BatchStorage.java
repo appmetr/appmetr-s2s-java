@@ -28,7 +28,7 @@ public interface BatchStorage {
      * @return the head of this storage
      * @throws InterruptedException if interrupted while waiting
      */
-    BinaryBatch peek() throws InterruptedException, IOException;
+    BinaryBatch get() throws InterruptedException, IOException;
 
     /**
      * Removes the head of this storage.
@@ -44,4 +44,9 @@ public interface BatchStorage {
      * @return if storage is empty
      */
     boolean isEmpty();
+
+    /**
+     * Storage should store all data and clean up
+     */
+    default void shutdown() throws InterruptedException {}
 }

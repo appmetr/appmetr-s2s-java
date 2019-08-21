@@ -54,11 +54,11 @@ class HeapStorageTest {
 
         final Thread consumerThread = new Thread(() -> {
             try {
-                final BinaryBatch binaryBatch1 = heapStorage.peek();
+                final BinaryBatch binaryBatch1 = heapStorage.get();
                 assertEquals(1, binaryBatch1.getBatchId());
                 heapStorage.remove();
 
-                final BinaryBatch binaryBatch2 = heapStorage.peek();
+                final BinaryBatch binaryBatch2 = heapStorage.get();
                 assertEquals(2, binaryBatch2.getBatchId());
                 heapStorage.remove();
             } catch (Throwable e) {
@@ -80,6 +80,6 @@ class HeapStorageTest {
             fail(throwables[1]);
         }
 
-        assertTrue(heapStorage.batchesQueue.isEmpty());
+        assertTrue(heapStorage.isEmpty());
     }
 }

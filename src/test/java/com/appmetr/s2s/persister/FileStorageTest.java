@@ -2,7 +2,6 @@ package com.appmetr.s2s.persister;
 
 import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.events.Event;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,11 +28,11 @@ class FileStorageTest {
     void storeAndPeekConcurrently() throws IOException, InterruptedException {
         final Thread consumerThread = new Thread(() -> {
             try {
-                final BinaryBatch binaryBatch1 = fileStorage.peek();
+                final BinaryBatch binaryBatch1 = fileStorage.get();
                 assertEquals(0, binaryBatch1.getBatchId());
                 fileStorage.remove();
 
-                final BinaryBatch binaryBatch2 = fileStorage.peek();
+                final BinaryBatch binaryBatch2 = fileStorage.get();
                 assertEquals(1, binaryBatch2.getBatchId());
                 fileStorage.remove();
             } catch (Throwable e) {
@@ -53,7 +52,7 @@ class FileStorageTest {
             fail(throwables[0]);
         }
 
-        assertTrue(fileStorage.fileIds.isEmpty());
+        assertTrue(fileStorage.isEmpty());
     }
 
     @Test
@@ -62,14 +61,14 @@ class FileStorageTest {
         assertTrue(fileStorage.store(Collections.singleton(new Event("test1")), batchFactory));
 
         final FileStorage otherStorage = new FileStorage(this.fileStorage.path);
-        final BinaryBatch binaryBatch1 = otherStorage.peek();
+        final BinaryBatch binaryBatch1 = otherStorage.get();
         assertEquals(0, binaryBatch1.getBatchId());
         otherStorage.remove();
 
-        final BinaryBatch binaryBatch2 = otherStorage.peek();
+        final BinaryBatch binaryBatch2 = otherStorage.get();
         assertEquals(1, binaryBatch2.getBatchId());
         otherStorage.remove();
 
-        assertTrue(otherStorage.fileIds.isEmpty());
+        assertTrue(otherStorage.isEmpty());
     }
 }

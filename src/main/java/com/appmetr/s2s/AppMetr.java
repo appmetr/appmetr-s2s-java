@@ -37,7 +37,7 @@ public class AppMetr {
     protected Instant lastFlushTime;
     protected ArrayList<Action> actionList = new ArrayList<>();
     protected Thread uploadThread;
-    protected Throwable lastUploadThrowable;
+    protected volatile Throwable lastUploadThrowable;
 
     protected AppMetr() {
     }
@@ -135,6 +135,7 @@ public class AppMetr {
         stopped = true;
         try {
             flush();
+            batchStorage.shutdown();
 
             uploadThread.interrupt();
             uploadThread.join();
@@ -225,7 +226,7 @@ public class AppMetr {
         return false;
     }
 
-    public synchronized Throwable getLastUploadError() {
+    public Throwable getLastUploadError() {
         return lastUploadThrowable;
     }
 
@@ -245,7 +246,7 @@ public class AppMetr {
             final Instant batchReadStart = clock.instant();
             final BinaryBatch binaryBatch;
             try {
-                binaryBatch = batchStorage.peek();
+                binaryBatch = batchStorage.get();
             } catch (InterruptedException e) {
                 if (shouldInterrupt()) {
                     break;

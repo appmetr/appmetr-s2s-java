@@ -33,6 +33,10 @@ public class FileStorage implements BatchStorage {
 
     @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws IOException {
         final BinaryBatch binaryBatch = batchFactory.createBatch(actions, lastBatchId);
+        return store(binaryBatch);
+    }
+
+    protected synchronized boolean store(BinaryBatch binaryBatch) throws IOException {
         final Path file = batchFilePath(lastBatchId);
 
         Files.write(file, binaryBatch.getBytes());
@@ -45,7 +49,7 @@ public class FileStorage implements BatchStorage {
         return true;
     }
 
-    @Override public synchronized BinaryBatch peek() throws InterruptedException, IOException {
+    @Override public synchronized BinaryBatch get() throws InterruptedException, IOException {
         while (true) {
             final Long batchId = fileIds.peek();
             if (batchId == null) {

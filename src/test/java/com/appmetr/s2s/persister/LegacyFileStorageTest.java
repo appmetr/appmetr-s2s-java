@@ -4,7 +4,6 @@ import com.appmetr.s2s.Batch;
 import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.SerializationUtils;
 import com.appmetr.s2s.events.Event;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,17 +13,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LegacyFileStorageTest {
-
     static BatchFactory batchFactory = (actions, batchId) -> new BinaryBatch(batchId, new byte[1]);
 
     LegacyFileStorage legacyFileStorage;
-
-    @BeforeEach
-    void setUp(@TempDir Path path) throws IOException {
-    }
 
     @Test
     void readFromLegacyFiles(@TempDir Path path) throws IOException, InterruptedException {
@@ -39,17 +34,17 @@ class LegacyFileStorageTest {
         assertTrue(legacyFileStorage.store(Collections.singleton(new Event("test2")), batchFactory));
 
         final LegacyFileStorage otherStorage = new LegacyFileStorage(path);
-        final BinaryBatch binaryBatch1 = otherStorage.peek();
+        final BinaryBatch binaryBatch1 = otherStorage.get();
         assertEquals(0, binaryBatch1.getBatchId());
         otherStorage.remove();
-        final BinaryBatch binaryBatch2 = otherStorage.peek();
+        final BinaryBatch binaryBatch2 = otherStorage.get();
         assertEquals(1, binaryBatch2.getBatchId());
         otherStorage.remove();
-        final BinaryBatch binaryBatch3 = otherStorage.peek();
+        final BinaryBatch binaryBatch3 = otherStorage.get();
         assertEquals(2, binaryBatch3.getBatchId());
         otherStorage.remove();
 
-        assertTrue(otherStorage.fileIds.isEmpty());
+        assertTrue(otherStorage.isEmpty());
     }
 
     void createBatch(Path path, long batchId) throws IOException {

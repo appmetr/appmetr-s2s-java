@@ -30,7 +30,8 @@ public class SerializationUtils {
         objectMapper = new ObjectMapper()
                 .setSerializationInclusion(JsonInclude.Include.NON_NULL)
                 .setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
-                .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
+                .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
+                .addMixIn(Action.class, ActionMixin.class);
         objectMapperTyped = objectMapper.copy();
         final SimpleModule module = new SimpleModule();
         module.addSerializer(Action.class, new ActionJsonSerializer());
@@ -114,5 +115,10 @@ public class SerializationUtils {
                 throw new RuntimeException("Couldn't find class " + className);
             }
         }
+    }
+
+    static abstract class ActionMixin {
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        long userTime;
     }
 }

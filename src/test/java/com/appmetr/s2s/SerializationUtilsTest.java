@@ -92,13 +92,25 @@ class SerializationUtilsTest {
         event.setTimestamp(8);
         assertEquals(8, event.getTimestamp());
 
-        Batch original = new Batch("s1", 2, singletonList(event));
+        Batch original = new Batch("s1", 1, singletonList(event));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
         final JsonNode jsonNode = decompress(bytes);
 
 
         final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
         assertEquals(8, batchNode.get(0).get("userTime").asLong());
+    }
+
+    @Test()
+    public void serializeUserTime_not_specified() throws Exception {
+        final Event event = new Event("test");
+
+        Batch original = new Batch("s1", 1, singletonList(event));
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
+        final JsonNode jsonNode = decompress(bytes);
+
+        final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
+        assertNull(batchNode.get(0).get("userTime"));
     }
 
     @Test

@@ -28,6 +28,9 @@ public class AttachEntityAttributes extends Action {
     }
 
     @Override public String toString() {
-        return "AttachEntityAttributes{} " + super.toString();
+        return "AttachEntityAttributes{" +
+                "entityName='" + entityName + '\'' +
+                ", entityValue='" + entityValue + '\'' +
+                "} " + super.toString();
     }
 }

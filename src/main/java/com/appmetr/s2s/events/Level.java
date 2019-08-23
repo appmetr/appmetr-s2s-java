@@ -3,7 +3,7 @@ package com.appmetr.s2s.events;
 import java.util.Objects;
 
 public class Level extends Action {
-    private static final String ACTION = "trackLevel";
+    public static final String ACTION = "trackLevel";
 
     private int level;
 

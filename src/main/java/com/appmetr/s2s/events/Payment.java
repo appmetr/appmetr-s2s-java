@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 public class Payment extends Action {
-    private static final String ACTION = "trackPayment";
+    public static final String ACTION = "trackPayment";
 
     private String orderId;
     private String transactionId;

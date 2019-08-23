@@ -92,13 +92,25 @@ class SerializationUtilsTest {
         event.setTimestamp(8);
         assertEquals(8, event.getTimestamp());
 
-        Batch original = new Batch("s1", 2, singletonList(event));
+        Batch original = new Batch("s1", 1, singletonList(event));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
         final JsonNode jsonNode = decompress(bytes);
 
 
         final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
         assertEquals(8, batchNode.get(0).get("userTime").asLong());
+    }
+
+    @Test()
+    public void serializeUserTime_not_specified() throws Exception {
+        final Event event = new Event("test");
+
+        Batch original = new Batch("s1", 1, singletonList(event));
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
+        final JsonNode jsonNode = decompress(bytes);
+
+        final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
+        assertFalse(batchNode.get(0).has("userTime"));
     }
 
     @Test
@@ -110,6 +122,22 @@ class SerializationUtilsTest {
 
         final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
         assertNull(batchNode.get(0).get("$userTime"));
+    }
+
+    @Test
+    void serializeAttacheEntityAttributes() throws IOException {
+        final AttachEntityAttributes attachEntityAttributes = new AttachEntityAttributes("$serverUserId", "testId");
+        attachEntityAttributes.getProperties().put("p1", 1);
+        final Batch batch = new Batch("s1", 1, singletonList(attachEntityAttributes));
+        final byte[] bytes = SerializationUtils.serializeJsonGzip(batch, false);
+
+        final JsonNode jsonNode = decompress(bytes);
+        final ArrayNode batches = (ArrayNode) jsonNode.get("batch");
+        assertEquals(1, batches.size());
+        final JsonNode action = batches.get(0);
+        assertEquals(AttachEntityAttributes.ACTION, action.get("action").textValue());
+        assertEquals("$serverUserId", action.get("entityName").textValue());
+        assertEquals("testId", action.get("entityValue").textValue());
     }
 
     static JsonNode decompress(byte[] compressedBody) throws IOException {

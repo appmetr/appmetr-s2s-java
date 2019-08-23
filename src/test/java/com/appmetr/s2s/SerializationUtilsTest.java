@@ -110,7 +110,7 @@ class SerializationUtilsTest {
         final JsonNode jsonNode = decompress(bytes);
 
         final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
-        assertNull(batchNode.get(0).get("userTime"));
+        assertFalse(batchNode.get(0).has("userTime"));
     }
 
     @Test

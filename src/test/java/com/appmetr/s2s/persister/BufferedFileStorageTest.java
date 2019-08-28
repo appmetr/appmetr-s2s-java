@@ -18,8 +18,8 @@ class BufferedFileStorageTest {
 
     static BatchFactory batchFactory = (actions, batchId) -> new BinaryBatch(batchId, new byte[2]);
 
-    HeapStorage heapStorage = new HeapStorage();
-    NonBlockingHeapStorage nonBlockingHeapStorage = new NonBlockingHeapStorage();
+    HeapStorage heapStorage;
+    NonBlockingHeapStorage nonBlockingHeapStorage;
     FileStorage fileStorage;
     BufferedFileStorage bufferedFileStorage;
 
@@ -31,7 +31,7 @@ class BufferedFileStorageTest {
 
     @Test
     void blocksForever() {
-        heapStorage.setMaxBytes(1);
+        heapStorage = new HeapStorage(1);
         bufferedFileStorage = new BufferedFileStorage(fileStorage, heapStorage);
         assertThrows(AssertionFailedError.class, () -> assertTimeoutPreemptively(ofMillis(1), () -> {
             bufferedFileStorage.store(Collections.singleton(new Event("test1")), batchFactory);
@@ -41,7 +41,7 @@ class BufferedFileStorageTest {
 
     @Test
     void drop() throws InterruptedException, IOException {
-        nonBlockingHeapStorage.setMaxBytes(1);
+        nonBlockingHeapStorage = new NonBlockingHeapStorage(1);
         bufferedFileStorage = new BufferedFileStorage(fileStorage, nonBlockingHeapStorage);
 
         assertFalse(bufferedFileStorage.store(Collections.singleton(new Event("test")), batchFactory));
@@ -50,7 +50,7 @@ class BufferedFileStorageTest {
 
     @Test
     void storeAndPeekConcurrently() throws InterruptedException {
-        heapStorage.setMaxBytes(2);
+        heapStorage = new HeapStorage(2);
         bufferedFileStorage = new BufferedFileStorage(fileStorage, heapStorage);
 
         Throwable[] throwables = new Throwable[2];

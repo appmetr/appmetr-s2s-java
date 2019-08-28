@@ -7,6 +7,13 @@ import com.appmetr.s2s.BinaryBatch;
  */
 public class HeapStorage extends AbstractHeapStorage {
 
+    protected HeapStorage() {
+    }
+
+    public HeapStorage(long maxBytes) {
+        super(maxBytes);
+    }
+
     @Override protected boolean isCapacityExceeded(BinaryBatch binaryBatch) throws InterruptedException {
         while (true) {
             final boolean capacityExceeded = super.isCapacityExceeded(binaryBatch);

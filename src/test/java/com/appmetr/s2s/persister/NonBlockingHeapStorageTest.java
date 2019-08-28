@@ -77,7 +77,7 @@ class NonBlockingHeapStorageTest {
 
     @Test
     void drop() throws InterruptedException {
-        nonBlockingHeapStorage.setMaxBytes(1);
+        nonBlockingHeapStorage = new NonBlockingHeapStorage(1);
 
         assertFalse(nonBlockingHeapStorage.store(Collections.singleton(new Event("test")), batchFactory));
         assertTrue(nonBlockingHeapStorage.batchesQueue.isEmpty());

@@ -1,16 +1,17 @@
 package com.appmetr.s2s.persister;
 
-import com.appmetr.s2s.BinaryBatch;
 import com.appmetr.s2s.events.Action;
 
-import java.time.Clock;
-import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class NonBlockingHeapStorage extends AbstractHeapStorage {
+
+    protected NonBlockingHeapStorage() {
+    }
+
+    public NonBlockingHeapStorage(long maxBytes) {
+        super(maxBytes);
+    }
 
     /**
      * Never blocks

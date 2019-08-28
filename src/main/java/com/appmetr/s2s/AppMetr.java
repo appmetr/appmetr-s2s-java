@@ -20,7 +20,7 @@ public class AppMetr {
     protected boolean retryBatchUpload = true;
     protected String serverId = UUID.randomUUID().toString();
     protected Clock clock = Clock.systemUTC();
-    protected BatchStorage batchStorage = new HeapStorage();
+    protected BatchStorage batchStorage = new HeapStorage(HeapStorage.DEFAULT_MAX_BYTES);
     protected BatchSender batchSender = new HttpBatchSender();
     protected BatchFactoryServerId batchFactory = GzippedJsonBatchFactory.instance;
 

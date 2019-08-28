@@ -9,20 +9,27 @@ import java.util.Collection;
 import java.util.Queue;
 
 public class AbstractHeapStorage implements BatchStorage {
+    public static final long DEFAULT_MAX_BYTES = 64 * 1024 * 1024;
 
+    protected final long maxBytes;
     protected Queue<BinaryBatch> batchesQueue = new ArrayDeque<>();
     protected Clock clock = Clock.systemUTC();
-    protected long maxBytes;
-
     protected long previousBatchId;
     protected long occupiedBytes;
 
-    public void setClock(Clock clock) {
-        this.clock = clock;
+    protected AbstractHeapStorage() {
+        this(DEFAULT_MAX_BYTES);
     }
 
-    public void setMaxBytes(long maxBytes) {
+    /**
+     * @param maxBytes Limit storage capacity. Use Long.MAX_VALUE for unbound
+     */
+    public AbstractHeapStorage(long maxBytes) {
         this.maxBytes = maxBytes;
+    }
+
+    public void setClock(Clock clock) {
+        this.clock = clock;
     }
 
     @Override public synchronized boolean store(Collection<Action> actions, BatchFactory batchFactory) throws InterruptedException {
@@ -76,6 +83,6 @@ public class AbstractHeapStorage implements BatchStorage {
     }
 
     protected boolean isCapacityExceeded(BinaryBatch binaryBatch) throws InterruptedException {
-        return maxBytes > 0 && occupiedBytes + binaryBatch.getBytes().length > maxBytes;
+        return occupiedBytes + binaryBatch.getBytes().length > maxBytes;
     }
 }

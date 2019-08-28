@@ -18,7 +18,7 @@ class HeapStorageTest {
 
     static BatchFactory batchFactory = (actions, batchId) -> new BinaryBatch(batchId, new byte[1]);
 
-    HeapStorage heapStorage = new HeapStorage();
+    HeapStorage heapStorage = new HeapStorage(1);
 
     @BeforeEach
     void setUp() {
@@ -27,7 +27,6 @@ class HeapStorageTest {
 
     @Test
     void blocksForever() throws InterruptedException {
-        heapStorage.setMaxBytes(1);
         assertTrue(heapStorage.store(Collections.singleton(new Event("test1")), batchFactory));
         assertThrows(AssertionFailedError.class, () -> assertTimeoutPreemptively(ofMillis(1), () -> {
             heapStorage.store(Collections.singleton(new Event("test2")), batchFactory);
@@ -37,8 +36,6 @@ class HeapStorageTest {
 
     @Test
     void storeAndPeekConcurrently() throws InterruptedException {
-        heapStorage.setMaxBytes(1);
-
         Throwable[] throwables = new Throwable[2];
 
         final Thread producerThread = new Thread(() -> {

@@ -307,6 +307,7 @@ public class AppMetr {
 
                 if (!retryBatchUpload) {
                     tryRemove(binaryBatch.getBatchId());
+                    break;
                 }
 
                 log.info("Retrying the batch {}", binaryBatch.getBatchId());

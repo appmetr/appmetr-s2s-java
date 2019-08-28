@@ -295,7 +295,7 @@ public class AppMetrTest {
         assertTrue(appMetr.track(new Event("test1")));
 
         appMetr.flush();
-
+        Thread.sleep(2);
         verify(mockSender).send(eq(url), eq(token), any());
 
         appMetr.hardStop();

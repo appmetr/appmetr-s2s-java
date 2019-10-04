@@ -47,15 +47,6 @@ class SerializationUtilsTest {
     }
 
     @Test()
-    void serializeLevel() throws Exception {
-        Batch original = new Batch("s1", 2, singletonList(new Level(2)));
-        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
-        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
-
-        assertEquals(original, deserialized);
-    }
-
-    @Test()
     void serializePayment() throws Exception {
         Batch original = new Batch("s1", 2, singletonList(
                 new Payment("order1", "trans1", "proc1", "USD", "123", null, null, null, true)));

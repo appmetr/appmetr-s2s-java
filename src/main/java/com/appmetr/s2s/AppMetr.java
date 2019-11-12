@@ -332,4 +332,8 @@ public class AppMetr {
     protected boolean shouldInterrupt() {
         return hardStop || (batchStorage.isPersistent() && !softStop) || batchStorage.isEmpty();
     }
+
+    public static long getTimeKey() {
+        return Action.createTimeKey(System.currentTimeMillis());
+    }
 }

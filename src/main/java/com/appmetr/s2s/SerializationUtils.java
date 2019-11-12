@@ -120,5 +120,7 @@ public class SerializationUtils {
     static abstract class ActionMixin {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         long userTime;
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        long userTimeKey;
     }
 }

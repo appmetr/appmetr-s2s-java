@@ -323,6 +323,13 @@ public class AppMetrTest {
         assertTrue(RuntimeException.class.isAssignableFrom(appMetr.getLastUploadError().getClass()));
     }
 
+    @Test
+    void timeKey() {
+        long timeKey1 = AppMetr.getTimeKey();
+        long timeKey2 = AppMetr.getTimeKey();
+        assertTrue(timeKey1 < timeKey2);
+    }
+
     static void waitForever() throws InterruptedException {
         while (true) {
             Thread.sleep(100);

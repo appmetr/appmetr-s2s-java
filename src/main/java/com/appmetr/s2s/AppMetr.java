@@ -1,19 +1,27 @@
 package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Action;
-import com.appmetr.s2s.persister.*;
-import com.appmetr.s2s.sender.HttpBatchSender;
+import com.appmetr.s2s.persister.BatchFactoryServerId;
+import com.appmetr.s2s.persister.BatchStorage;
+import com.appmetr.s2s.persister.GzippedJsonBatchFactory;
+import com.appmetr.s2s.persister.HeapStorage;
 import com.appmetr.s2s.sender.BatchSender;
+import com.appmetr.s2s.sender.HttpBatchSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.time.*;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.UUID;
 
 public class AppMetr {
     private static final Logger log = LoggerFactory.getLogger(AppMetr.class);
+
+    protected static final int BITS_PER_TIMESTAMP_MS = 42; //max value is 2106 year
+    protected static final int BITS_PER_COUNTER = 64 - BITS_PER_TIMESTAMP_MS; //22 bits, max value is 4M
 
     protected String token;
     protected String url;
@@ -177,6 +185,8 @@ public class AppMetr {
             }
         }
 
+        newAction.setInnerTimeKey(getTimeKey());
+        
         actionList.add(newAction);
         actionsBytes += newAction.calcApproximateSize();
 
@@ -333,7 +343,24 @@ public class AppMetr {
         return hardStop || (batchStorage.isPersistent() && !softStop) || batchStorage.isEmpty();
     }
 
-    public static long getTimeKey() {
-        return Action.createTimeKey(System.currentTimeMillis());
+    public long getTimeKey() {
+        synchronized (timeKeyHolder) {
+            final long now = clock.millis();
+            if (now <= timeKeyHolder.millis) {
+                timeKeyHolder.counter++;
+            } else {
+                timeKeyHolder.millis = now;
+                timeKeyHolder.counter = 0;
+            }
+
+            return (timeKeyHolder.millis << BITS_PER_COUNTER) | timeKeyHolder.counter;
+        }
+    }
+
+    protected final TimeKeyHolder timeKeyHolder = new TimeKeyHolder();
+
+    protected static class TimeKeyHolder {
+        protected long millis;
+        protected long counter;
     }
 }

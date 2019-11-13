@@ -4,13 +4,8 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class Action {
-    private static final int BITS_PER_TIMESTAMP_MS = 42; //max value is 2106 year
-    private static final int BITS_PER_COUNTER = 64 - BITS_PER_TIMESTAMP_MS; //22 bits, max value is 4M
-    private static final AtomicLong timeKeyCounter = new AtomicLong();
-
     private String action;
     private long timestamp = System.currentTimeMillis();
     private Map<String, Object> properties = new HashMap<>();
@@ -21,7 +16,6 @@ public abstract class Action {
 
     public Action(String action) {
         this.action = action;
-        this.timeKey = createTimeKey(timestamp);
     }
 
     public String getAction() {
@@ -58,6 +52,13 @@ public abstract class Action {
     public Action setTimeKey(long timeKey) {
         this.userTimeKey = timeKey;
         return this;
+    }
+
+    /**
+     * Must not to be called directly
+     */
+    public void setInnerTimeKey(long timeKey) {
+        this.timeKey = timeKey;
     }
 
     public int calcApproximateSize() {
@@ -101,9 +102,5 @@ public abstract class Action {
                 ", properties=" + getProperties() +
                 ", userId='" + getUserId() + '\'' +
                 '}';
-    }
-
-    public static long createTimeKey(long timestampMs) {
-        return (timestampMs << BITS_PER_COUNTER) | timeKeyCounter.getAndIncrement();
     }
 }

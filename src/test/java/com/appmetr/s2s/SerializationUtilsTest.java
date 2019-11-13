@@ -105,6 +105,7 @@ class SerializationUtilsTest {
     @Test()
     void serializeUserTimeKey() throws Exception {
         final Event event = new Event("test");
+        event.setInnerTimeKey(3);
         event.setTimeKey(5);
         final ArrayNode batchNode = batchNode(new Batch("s1", 1, singletonList(event)));
         assertTrue(batchNode.get(0).has("timeKey"));
@@ -114,12 +115,7 @@ class SerializationUtilsTest {
     @Test()
     void serializeUserTimeKey_not_specified() throws Exception {
         final ArrayNode batchNode1 = batchNode(new Batch("s1", 1, singletonList(new Event("test1"))));
-        assertTrue(batchNode1.get(0).has("timeKey"));
         assertFalse(batchNode1.get(0).has("userTimeKey"));
-
-        final Event event2 = new Event("test2");
-        final ArrayNode batchNode2 = batchNode(new Batch("s1", 1, singletonList(event2)));
-        assertTrue(batchNode1.get(0).get("timeKey").asLong() < batchNode2.get(0).get("timeKey").asLong());
     }
 
     @Test

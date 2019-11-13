@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -324,10 +325,26 @@ public class AppMetrTest {
     }
 
     @Test
-    void timeKey() {
-        long timeKey1 = AppMetr.getTimeKey();
-        long timeKey2 = AppMetr.getTimeKey();
+    void getTimeKey() {
+        long timeKey1 = appMetr.getTimeKey();
+        long timeKey2 = appMetr.getTimeKey();
         assertTrue(timeKey1 < timeKey2);
+    }
+
+    @Test
+    void timeKeyToAction() throws IOException, InterruptedException, NoSuchFieldException, IllegalAccessException {
+        final Event event1 = new Event("test1");
+        final Event event2 = new Event("test2");
+        appMetr.start();
+        assertTrue(appMetr.track(event1));
+        assertTrue(appMetr.track(event2));
+        assertTrue(getInnerTimeKey(event1) < getInnerTimeKey(event2));
+    }
+
+    static long getInnerTimeKey(Action action) throws NoSuchFieldException, IllegalAccessException {
+        final Field timeKeyFiled = Action.class.getDeclaredField("timeKey");
+        timeKeyFiled.setAccessible(true);
+        return (long) timeKeyFiled.get(action);
     }
 
     static void waitForever() throws InterruptedException {

@@ -121,6 +121,8 @@ public class SerializationUtils {
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         long userTime;
         @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        long timeKey;
+        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
         long userTimeKey;
     }
 }

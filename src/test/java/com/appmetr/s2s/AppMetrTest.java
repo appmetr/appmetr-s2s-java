@@ -309,13 +309,13 @@ public class AppMetrTest {
         final TestStorage testStorage = new TestStorage();
 
         appMetr.setBatchStorage(testStorage);
-        appMetr.setFailedUploadTimeout(Duration.ofMillis(10));
+        appMetr.setFailedUploadTimeout(Duration.ofMillis(1));
         appMetr.start();
 
         assertTrue(appMetr.track(new Event("test1")));
 
         appMetr.flush();
-        Thread.sleep(10);
+        Thread.sleep(20);
 
         assertThrows(RuntimeException.class, () -> appMetr.track(new Event("test2")));
 

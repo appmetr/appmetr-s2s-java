@@ -45,11 +45,17 @@ public abstract class Action {
     }
 
     public Action setTimestamp(long timestamp) {
+        if (userTimeKey != 0) {
+            throw new IllegalArgumentException("TimeKey and Timestamp cannot be specified both");
+        }
         this.userTime = timestamp;
         return this;
     }
 
     public Action setTimeKey(long timeKey) {
+        if (userTime != 0) {
+            throw new IllegalArgumentException("TimeKey and Timestamp cannot be specified both");
+        }
         this.userTimeKey = timeKey;
         return this;
     }

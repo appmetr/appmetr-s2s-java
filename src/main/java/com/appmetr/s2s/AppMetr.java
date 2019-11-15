@@ -22,6 +22,7 @@ public class AppMetr {
 
     protected static final int BITS_PER_TIMESTAMP_MS = 42; //max value is 2106 year
     protected static final int BITS_PER_COUNTER = 64 - BITS_PER_TIMESTAMP_MS; //22 bits, max value is 4M
+    protected static final int COUNTER_MASK = (1 << BITS_PER_COUNTER) - 1; //it means 2 ^ BITS_PER_COUNTER - 1
 
     protected String token;
     protected String url;
@@ -347,7 +348,7 @@ public class AppMetr {
         synchronized (timeKeyHolder) {
             final long now = clock.millis();
             if (now <= timeKeyHolder.millis) {
-                timeKeyHolder.counter++;
+                timeKeyHolder.counter = (timeKeyHolder.counter + 1) & COUNTER_MASK;
             } else {
                 timeKeyHolder.millis = now;
                 timeKeyHolder.counter = 0;

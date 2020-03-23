@@ -1,17 +1,18 @@
 package com.appmetr.s2s.events;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 public abstract class Action {
     private String action;
-    private long timestamp = new Date().getTime();
+    private long timestamp = System.currentTimeMillis();
     private Map<String, Object> properties = new HashMap<>();
     private String userId;
     private long userTime;
+    private long timeKey;
+    private long userTimeKey;
 
     public Action(String action) {
         this.action = action;
@@ -44,8 +45,26 @@ public abstract class Action {
     }
 
     public Action setTimestamp(long timestamp) {
+        if (userTimeKey != 0) {
+            throw new IllegalArgumentException("TimeKey and Timestamp cannot be specified both");
+        }
         this.userTime = timestamp;
         return this;
+    }
+
+    public Action setTimeKey(long timeKey) {
+        if (userTime != 0) {
+            throw new IllegalArgumentException("TimeKey and Timestamp cannot be specified both");
+        }
+        this.userTimeKey = timeKey;
+        return this;
+    }
+
+    /**
+     * Must not to be called directly
+     */
+    public void setInnerTimeKey(long timeKey) {
+        this.timeKey = timeKey;
     }
 
     public int calcApproximateSize() {

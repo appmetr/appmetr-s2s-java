@@ -66,7 +66,7 @@ class SerializationUtilsTest {
     }
 
     @Test
-    public void serializeServerInstall() {
+    void serializeServerInstall() {
         Action install = Events.serverInstall("testUser")
                 .setProperties(singletonMap("game", "wr"));
         Batch original = new Batch("s1", 1, singletonList(install));
@@ -87,41 +87,41 @@ class SerializationUtilsTest {
     }
 
     @Test()
-    public void serializeUserTime() throws Exception {
+    void serializeUserTime() throws Exception {
         final Event event = new Event("test");
         event.setTimestamp(8);
         assertEquals(8, event.getTimestamp());
 
-        Batch original = new Batch("s1", 1, singletonList(event));
-        byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
-        final JsonNode jsonNode = decompress(bytes);
-
-
-        final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
+        final ArrayNode batchNode = batchNode(new Batch("s1", 1, singletonList(event)));
         assertEquals(8, batchNode.get(0).get("userTime").asLong());
     }
 
     @Test()
-    public void serializeUserTime_not_specified() throws Exception {
-        final Event event = new Event("test");
-
-        Batch original = new Batch("s1", 1, singletonList(event));
-        byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
-        final JsonNode jsonNode = decompress(bytes);
-
-        final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
+    void serializeUserTime_not_specified() throws Exception {
+        final ArrayNode batchNode = batchNode(new Batch("s1", 1, singletonList(new Event("test"))));
         assertFalse(batchNode.get(0).has("userTime"));
+    }
+
+    @Test()
+    void serializeUserTimeKey() throws Exception {
+        final Event event = new Event("test");
+        event.setInnerTimeKey(3);
+        event.setTimeKey(5);
+        final ArrayNode batchNode = batchNode(new Batch("s1", 1, singletonList(event)));
+        assertTrue(batchNode.get(0).has("timeKey"));
+        assertEquals(5, batchNode.get(0).get("userTimeKey").asLong());
+    }
+
+    @Test()
+    void serializeUserTimeKey_not_specified() throws Exception {
+        final ArrayNode batchNode1 = batchNode(new Batch("s1", 1, singletonList(new Event("test1"))));
+        assertFalse(batchNode1.get(0).has("userTimeKey"));
     }
 
     @Test
     void serializeWithoutOriginalTime() throws Exception {
-        Batch original = new Batch("s1", 2, singletonList(new Event("test")));
-        byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);
-
-        final JsonNode jsonNode = decompress(bytes);
-
-        final ArrayNode batchNode = (ArrayNode) jsonNode.get("batch");
-        assertNull(batchNode.get(0).get("$userTime"));
+        final ArrayNode batchNode = batchNode(new Batch("s1", 2, singletonList(new Event("test"))));
+        assertNull(batchNode.get(0).get("userTime"));
     }
 
     @Test
@@ -138,6 +138,12 @@ class SerializationUtilsTest {
         assertEquals(AttachEntityAttributes.ACTION, action.get("action").textValue());
         assertEquals("$serverUserId", action.get("entityName").textValue());
         assertEquals("testId", action.get("entityValue").textValue());
+    }
+
+    static ArrayNode batchNode(Batch batch) throws IOException {
+        byte[] bytes = SerializationUtils.serializeJsonGzip(batch, false);
+        final JsonNode jsonNode = decompress(bytes);
+        return  (ArrayNode) jsonNode.get("batch");
     }
 
     static JsonNode decompress(byte[] compressedBody) throws IOException {

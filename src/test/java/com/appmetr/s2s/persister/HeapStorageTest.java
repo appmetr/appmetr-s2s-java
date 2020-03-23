@@ -28,7 +28,7 @@ class HeapStorageTest {
     @Test
     void blocksForever() throws InterruptedException {
         assertTrue(heapStorage.store(Collections.singleton(new Event("test1")), batchFactory));
-        assertThrows(AssertionFailedError.class, () -> assertTimeoutPreemptively(ofMillis(1), () -> {
+        assertThrows(AssertionFailedError.class, () -> assertTimeoutPreemptively(ofMillis(10), () -> {
             heapStorage.store(Collections.singleton(new Event("test2")), batchFactory);
         }));
         assertEquals(1, heapStorage.batchesQueue.size());

@@ -39,12 +39,16 @@ public abstract class Action {
         return this;
     }
 
-    public long getTimestamp() {
+    public long getEventCreationTime() {
+        return timestamp;
+    }
+
+    public long getEventTime() {
         return userTime == 0 ? timestamp : userTime;
     }
 
-    public Action setTimestamp(long timestamp) {
-        this.userTime = timestamp;
+    public Action setUserTime(long userTime) {
+        this.userTime = userTime;
         return this;
     }
 
@@ -71,21 +75,21 @@ public abstract class Action {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Action action1 = (Action) o;
-        return getTimestamp() == action1.getTimestamp() &&
+        return getEventTime() == action1.getEventTime() &&
                 Objects.equals(getAction(), action1.getAction()) &&
                 Objects.equals(getProperties(), action1.getProperties()) &&
                 Objects.equals(getUserId(), action1.getUserId());
     }
 
     @Override public int hashCode() {
-        return Objects.hash(getAction(), getTimestamp(), getProperties(), getUserId());
+        return Objects.hash(getAction(), getEventTime(), getProperties(), getUserId());
     }
 
     @Override public String toString() {
         return "Action{" +
                 "action='" + getAction() + '\'' +
                 ", timestamp=" + Instant.ofEpochMilli(timestamp) +
-                ", userTime=" + Instant.ofEpochMilli(getTimestamp()) +
+                ", userTime=" + Instant.ofEpochMilli(getEventTime()) +
                 ", properties=" + getProperties() +
                 ", userId='" + getUserId() + '\'' +
                 '}';

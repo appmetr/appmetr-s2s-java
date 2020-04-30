@@ -89,8 +89,8 @@ class SerializationUtilsTest {
     @Test()
     public void serializeUserTime() throws Exception {
         final Event event = new Event("test");
-        event.setTimestamp(8);
-        assertEquals(8, event.getTimestamp());
+        event.setUserTime(8);
+        assertEquals(8, event.getEventTime());
 
         Batch original = new Batch("s1", 1, singletonList(event));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, false);

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
@@ -38,7 +39,7 @@ class SerializationUtilsTest {
     }
 
     @Test
-    void serializeEvent() throws Exception {
+    void serializeEvent() {
         Batch original = new Batch("s1", 1, singletonList(new Event("test")));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
@@ -47,8 +48,8 @@ class SerializationUtilsTest {
     }
 
     @Test()
-    void serializeLevel() throws Exception {
-        Batch original = new Batch("s1", 2, singletonList(new Level(2)));
+    void serializeLevel() {
+        Batch original = new Batch("s1", 2, singletonList(new AttachProperties().setProperties(singletonMap("$level", 2))));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
 
@@ -56,7 +57,7 @@ class SerializationUtilsTest {
     }
 
     @Test()
-    void serializePayment() throws Exception {
+    void serializePayment() {
         Batch original = new Batch("s1", 2, singletonList(
                 new Payment("order1", "trans1", "proc1", "USD", "123", null, null, null, true)));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
@@ -67,8 +68,9 @@ class SerializationUtilsTest {
 
     @Test
     public void serializeServerInstall() {
-        Action install = Events.serverInstall("testUser")
-                .setProperties(singletonMap("game", "wr"));
+        Action install = Events.serverInstall("testUser");
+        install.getProperties().putAll(singletonMap("game", "wr"));
+
         Batch original = new Batch("s1", 1, singletonList(install));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
@@ -81,7 +83,41 @@ class SerializationUtilsTest {
     }
 
     @Test
-    void serializeWithoutTypeInfo() throws Exception {
+    public void serializeTrackLevel() {
+        Action trackLevel = Events.trackLevel("testUser", 5);
+        trackLevel.getProperties().putAll(singletonMap("game", "wr"));
+
+        Batch original = new Batch("s1", 1, singletonList(trackLevel));
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+
+        assertEquals(1, deserialized.getBatch().size());
+        Action action = deserialized.getBatch().get(0);
+        assertEquals("testUser", action.getUserId());
+        assertTrue(action.getProperties().containsKey("game"));
+        assertEquals("wr", action.getProperties().get("game"));
+        assertEquals(5, action.getProperties().get("$level"));
+    }
+
+    @Test
+    public void serializeAbGroup() {
+        Action trackLevel = Events.trackAbGroup("testUser", Arrays.asList("party2019:A", "newYear2020:C"));
+        trackLevel.getProperties().putAll(singletonMap("game", "wr"));
+
+        Batch original = new Batch("s1", 1, singletonList(trackLevel));
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
+
+        assertEquals(1, deserialized.getBatch().size());
+        Action action = deserialized.getBatch().get(0);
+        assertEquals("testUser", action.getUserId());
+        assertTrue(action.getProperties().containsKey("game"));
+        assertEquals("wr", action.getProperties().get("game"));
+        assertEquals(Arrays.asList("party2019:A", "newYear2020:C"), action.getProperties().get("$abGroup"));
+    }
+
+    @Test
+    void serializeWithoutTypeInfo() {
         byte[] bytes = SerializationUtils.serializeJsonGzip(new Batch("s2", 9, singletonList(new Event("test"))), false);
         assertThrows(RuntimeException.class, () -> SerializationUtils.deserializeJsonGzip(bytes));
     }

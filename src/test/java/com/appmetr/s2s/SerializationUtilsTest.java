@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
@@ -61,8 +62,20 @@ class SerializationUtilsTest {
         Batch original = new Batch("s1", 2, singletonList(
                 new Payment("order1", "trans1", "proc1", "USD", "123", null, null, null, true)));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
+
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
-        System.out.println(deserialized);
+        assertEquals(original, deserialized);
+    }
+
+    @Test
+    void serializeRefundInfo() {
+        long cancelDate = System.currentTimeMillis();
+        Batch original = new Batch("s1", 2, singletonList(new Refund("transactionA", cancelDate)
+                .setProperties(singletonMap("reasonKey", "abc"))));
+
+        byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
+
+        Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);
         assertEquals(original, deserialized);
     }
 

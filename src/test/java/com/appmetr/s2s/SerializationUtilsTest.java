@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -199,5 +200,21 @@ class SerializationUtilsTest {
         } finally {
             inflater.end();
         }
+    }
+
+    @Test
+    void doubleWithE() throws IOException {
+        Action action = new Event("test");
+        action.setProperties(Collections.singletonMap("total", 4.272E+4));
+
+        final Batch batch = new Batch("s1", 1, singletonList(action));
+        final byte[] bytes = SerializationUtils.serializeJsonGzip(batch, false);
+
+        final JsonNode jsonNode = decompress(bytes);
+        final ArrayNode batches = (ArrayNode) jsonNode.get("batch");
+        assertEquals(1, batches.size());
+        final JsonNode event = batches.get(0);
+        JsonNode properties = event.get("properties");
+        assertEquals(4.272E+4, properties.get("total").doubleValue());
     }
 }

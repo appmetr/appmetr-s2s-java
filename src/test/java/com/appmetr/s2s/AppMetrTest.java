@@ -122,6 +122,7 @@ public class AppMetrTest {
         final Event event1 = new Event("test1");
         final Event event2 = new Event("test2");
         assertTrue(appMetr.track(event1));
+        assertEquals(0, testStorage.storeCalls.size());
 
         appMetr.setClock(Clock.fixed(Instant.ofEpochSecond(2), ZoneOffset.UTC));
 
@@ -274,7 +275,7 @@ public class AppMetrTest {
         appMetr.flush();
 
         verify(mockSender, timeout(100).atLeast(2)).send(eq(url), eq(token), any());
-        
+
         appMetr.hardStop();
 
         assertFalse(testStorage.getBathesQueue().isEmpty());
@@ -336,7 +337,7 @@ public class AppMetrTest {
             storeCalls.add(new ArrayList<>(actions));
             return super.store(actions, batchFactory);
         }
-        
+
         Queue<BinaryBatch> getBathesQueue() {
             return batchesQueue;
         }

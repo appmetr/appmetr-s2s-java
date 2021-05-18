@@ -6,7 +6,7 @@
     <groupId>com.appmetr</groupId>
     <artifactId>appmetr-s2s-java</artifactId>
     <packaging>jar</packaging>
-    <version>1.4.2-SNAPSHOT</version>
+    <version>1.4.3-SNAPSHOT</version>
     <name>appmetr-s2s-java</name>
 
     <scm>
@@ -25,9 +25,13 @@
 
     <distributionManagement>
         <repository>
-            <id>bintray</id>
-            <url>https://api.bintray.com/maven/appmetr/maven/appmetr-s2s-java</url>
+            <id>central</id>
+            <url>https://appmetr.jfrog.io/artifactory/appmetr-s2s-java</url>
         </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <url>https://appmetr.jfrog.io/artifactory/appmetr-s2s-java</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <dependencies>

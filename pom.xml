@@ -25,13 +25,9 @@
 
     <distributionManagement>
         <repository>
-            <id>central</id>
+            <id>jfrog</id>
             <url>https://appmetr.jfrog.io/artifactory/appmetr-s2s-java</url>
         </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <url>https://appmetr.jfrog.io/artifactory/appmetr-s2s-java</url>
-        </snapshotRepository>
     </distributionManagement>
 
     <dependencies>

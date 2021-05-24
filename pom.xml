@@ -26,7 +26,7 @@
     <distributionManagement>
         <repository>
             <id>jfrog</id>
-            <url>https://appmetr.jfrog.io/artifactory/appmetr-s2s-java</url>
+            <url>https://appmetr.jfrog.io/artifactory/maven/</url>
         </repository>
     </distributionManagement>
 

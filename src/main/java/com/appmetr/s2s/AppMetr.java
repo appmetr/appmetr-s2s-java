@@ -1,6 +1,7 @@
 package com.appmetr.s2s;
 
 import com.appmetr.s2s.events.Action;
+import com.appmetr.s2s.events.Payment;
 import com.appmetr.s2s.persister.*;
 import com.appmetr.s2s.sender.HttpBatchSender;
 import com.appmetr.s2s.sender.BatchSender;
@@ -180,6 +181,10 @@ public class AppMetr {
         actionList.add(newAction);
         actionsBytes += newAction.calcApproximateSize();
 
+        if (isNeedToForceFlush(newAction)) {
+            return flush();
+        }
+
         return true;
     }
 
@@ -331,5 +336,10 @@ public class AppMetr {
 
     protected boolean shouldInterrupt() {
         return hardStop || (batchStorage.isPersistent() && !softStop) || batchStorage.isEmpty();
+    }
+
+    protected boolean isNeedToForceFlush(Action newAction) {
+        // By default when payment is tracked, we need to flush (and send the batch) as soon as possible
+        return Payment.ACTION.equals(newAction.getAction());
     }
 }

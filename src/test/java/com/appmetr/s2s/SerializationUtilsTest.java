@@ -61,7 +61,7 @@ class SerializationUtilsTest {
     @Test()
     void serializePayment() {
         Batch original = new Batch("s1", 2, singletonList(
-                new Payment("order1", "trans1", "proc1", "USD", "123", null, null, null, true)));
+                new Payment("order1", "trans1", "proc1", "USD", "123", null, null, null, true, "127.0.0.1")));
         byte[] bytes = SerializationUtils.serializeJsonGzip(original, true);
 
         Batch deserialized = SerializationUtils.deserializeJsonGzip(bytes);

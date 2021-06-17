@@ -28,7 +28,7 @@ public class GzippedJsonBatchFactoryTest {
                     put("a",5);
                     put("$level",2);
                 }}),
-                new Payment("order1", "trans1", "proc1", "USD", "123")), 1, "s1");
+                new Payment("order1", "trans1", "proc1", "USD", "123", "127.0.0.1")), 1, "s1");
 
         final JsonNode jsonNode = decompress(batch.getBytes());
         assertEquals(1, jsonNode.get("batchId").asLong());
@@ -39,10 +39,16 @@ public class GzippedJsonBatchFactoryTest {
         assertEquals(2, events.size());
 
         assertEquals("attachProperties", events.get(0).get("action").asText());
-        assertEquals("trackPayment", events.get(1).get("action").asText());
+        assertEquals("trackServerPayment", events.get(1).get("action").asText());
 
+        // attach properties
         assertEquals(5, events.get(0).get("properties").get("a").asInt());
         assertEquals(2, events.get(0).get("properties").get("$level").asInt());
+
+        // payment
+        assertEquals("trans1", events.get(1).get("transactionId").asText());
+        assertEquals("order1", events.get(1).get("orderId").asText());
+        assertEquals("127.0.0.1", events.get(1).get("paymentClientIp").asText());
     }
 
     public static JsonNode decompress(byte[] compressedBody) throws IOException {

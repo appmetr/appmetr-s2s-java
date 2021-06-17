@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
 
 public class Payment extends Action {
-    public static final String ACTION = "trackPayment";
+    public static final String ACTION = "trackServerPayment";
 
     private String orderId;
     private String transactionId;
@@ -17,6 +17,7 @@ public class Payment extends Action {
     private String psUserStoreCountryCode;
     @JsonProperty("isSandbox")
     private Boolean sandbox;
+    private String paymentClientIp;
 
     //Only for Jackson deserialization
     private Payment() {
@@ -27,14 +28,15 @@ public class Payment extends Action {
                    String transactionId,
                    String processor,
                    String psUserSpentCurrencyCode,
-                   String psUserSpentCurrencyAmount) {
-        this(orderId, transactionId, processor, psUserSpentCurrencyCode, psUserSpentCurrencyAmount, null, null);
+                   String psUserSpentCurrencyAmount,
+                   String paymentClientIp) {
+        this(orderId, transactionId, processor, psUserSpentCurrencyCode, psUserSpentCurrencyAmount, null, null, paymentClientIp);
     }
 
     public Payment(String orderId, String transactionId, String processor, String psUserSpentCurrencyCode,
-                   String psUserSpentCurrencyAmount, String appCurrencyCode, String appCurrencyAmount) {
+                   String psUserSpentCurrencyAmount, String appCurrencyCode, String appCurrencyAmount, String paymentClientIp) {
         this(orderId, transactionId, processor, psUserSpentCurrencyCode, psUserSpentCurrencyAmount,
-                appCurrencyCode, appCurrencyAmount, null, null);
+                appCurrencyCode, appCurrencyAmount, null, null, paymentClientIp);
     }
 
     public Payment(String orderId,
@@ -45,7 +47,8 @@ public class Payment extends Action {
                    String appCurrencyCode,
                    String appCurrencyAmount,
                    String psUserStoreCountryCode,
-                   Boolean sandbox) {
+                   Boolean sandbox,
+                   String paymentClientIp) {
         this();
 
         this.orderId = orderId;
@@ -57,6 +60,7 @@ public class Payment extends Action {
         this.appCurrencyAmount = appCurrencyAmount;
         this.psUserStoreCountryCode = psUserStoreCountryCode;
         this.sandbox = sandbox;
+        this.paymentClientIp = paymentClientIp;
     }
 
     public String getOrderId() {
@@ -95,6 +99,10 @@ public class Payment extends Action {
         return sandbox;
     }
 
+    public String getPaymentClientIp() {
+        return paymentClientIp;
+    }
+
     @Override public int calcApproximateSize() {
         return super.calcApproximateSize()
                 + getStringLength(orderId)
@@ -104,7 +112,8 @@ public class Payment extends Action {
                 + getStringLength(psUserSpentCurrencyAmount)
                 + getStringLength(appCurrencyCode)
                 + getStringLength(appCurrencyAmount)
-                + getStringLength(psUserStoreCountryCode);
+                + getStringLength(psUserStoreCountryCode)
+                + getStringLength(paymentClientIp);
     }
 
     @Override public boolean equals(Object o) {
@@ -120,13 +129,14 @@ public class Payment extends Action {
                 Objects.equals(getAppCurrencyCode(), payment.getAppCurrencyCode()) &&
                 Objects.equals(getAppCurrencyAmount(), payment.getAppCurrencyAmount()) &&
                 Objects.equals(getPsUserStoreCountryCode(), payment.getPsUserStoreCountryCode()) &&
-                Objects.equals(getSandbox(), payment.getSandbox());
+                Objects.equals(getSandbox(), payment.getSandbox()) &&
+                Objects.equals(getPaymentClientIp(), payment.getPaymentClientIp());
     }
 
     @Override public int hashCode() {
         return Objects.hash(super.hashCode(), getOrderId(), getTransactionId(), getProcessor(),
                 getPsUserSpentCurrencyCode(), getPsUserSpentCurrencyAmount(), getAppCurrencyCode(),
-                getAppCurrencyAmount(), getPsUserStoreCountryCode(), getSandbox());
+                getAppCurrencyAmount(), getPsUserStoreCountryCode(), getSandbox(), getPaymentClientIp());
     }
 
     @Override public String toString() {
@@ -140,6 +150,7 @@ public class Payment extends Action {
                 ", appCurrencyAmount='" + getAppCurrencyAmount() + '\'' +
                 ", psUserStoreCountryCode='" + getPsUserStoreCountryCode() + '\'' +
                 ", sandbox=" + getSandbox() +
+                ", paymentClientIp='" + getPaymentClientIp() + '\'' +
                 "} " + super.toString();
     }
 }
